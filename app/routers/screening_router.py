@@ -7,7 +7,6 @@ router = APIRouter(prefix="/screening", tags=["screening"])
 
 agent = ScreeningAgent()
 
-
 @router.post("/chat", response_model=ScreeningResponse)
 def chat(payload: ScreeningRequest) -> ScreeningResponse:
     """TODO"""

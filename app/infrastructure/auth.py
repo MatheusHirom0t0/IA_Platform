@@ -1,15 +1,13 @@
 """TODO"""
+from typing import Optional,Dict, List
 import os
 from pathlib import Path
 import csv
-from typing import Dict, List
-
 from dotenv import load_dotenv
 
 load_dotenv()
 
 CSV_PATH = os.getenv("CSV_PATH")
-from typing import Optional
 
 def read_csv(file_path: Optional[str] = None):
     """TODO"""
