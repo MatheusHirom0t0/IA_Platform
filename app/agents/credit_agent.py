@@ -33,52 +33,39 @@ class CreditAgent:
 
     # ----------------- PEDIDO DE AUMENTO DE LIMITE -----------------
 
-    def build_increase_reply(self, data: Dict[str, str]) -> str:
+    def build_increase_reply(self,data: Dict[str, str]) -> str:
         """
-        data:
-        {
-            'cpf': '52189293871',
-            'current_limit': '7000.00',
-            'requested_limit': '13000.00',
-            'max_allowed_limit': '15000.00',
-            'status': 'approved' | 'rejected' | 'requested_below_current'
-        }
+        A IA não recebe NENHUM número.
+        Ela só recebe instruções sobre COMO responder.
         """
-
-        cpf = data["cpf"]
         status = data["status"]
-        current_limit = data["current_limit"]
-        requested_limit = data["requested_limit"]
-        max_allowed = data["max_allowed_limit"]
 
-        base_description = (
-            "Situação: análise de pedido de aumento de limite de crédito.\n"
-            f"Dados do cliente:\n"
-            f"- CPF: {cpf}\n"
-            f"- Limite atual (numérico): {current_limit}\n"
-            f"- Limite solicitado (numérico): {requested_limit}\n"
-            f"- Limite máximo permitido pelo score (numérico): {max_allowed}\n"
-            f"- Status da análise: {status}\n\n"
+        base_instruction = (
+            "Você é um analista de crédito. "
+            "Você NÃO deve incluir números. "
+            "Você NÃO deve tentar adivinhar valores. "
+            "Você apenas explica o motivo da decisão."
         )
 
         if status == "requested_below_current":
-            extra_instruction = (
-                "Explique que o valor solicitado é menor que o limite atual e que este canal "
-                "serve apenas para pedir aumento, não para reduzir limite. "
-                "Convide o cliente a informar um valor maior, se desejar."
+            instruction = (
+                "Explique que o pedido foi recusado porque o cliente solicitou um limite menor "
+                "que o limite atual, e este canal só serve para aumentos. "
+                "Convide o cliente a informar um valor maior."
             )
+
         elif status == "approved":
-            extra_instruction = (
-                "Explique de forma bem direta que o pedido foi APROVADO, informe qual era o limite atual "
-                "e qual será o novo limite, e diga que a atualização será feita conforme as regras internas do banco."
-            )
-        else:  # rejected
-            extra_instruction = (
-                "Explique de forma direta que o pedido foi RECUSADO porque o valor solicitado está acima "
-                "do limite máximo permitido pelo score. Sugira que ele peça um valor menor ou faça uma "
-                "entrevista de crédito no futuro."
+            instruction = (
+                "Explique que o pedido foi aprovado e forneça uma razão curta. "
+                "Nunca inclua números."
+
             )
 
-        user_message = base_description + extra_instruction
+        else:
+            instruction = (
+                "Explique que o pedido foi recusado porque ultrapassa o limite permitido pelo score. "
+                "Sugira pedir um valor menor ou tentar entrevista de crédito."
+            )
+        user_message = base_instruction + "\n\n" + instruction
 
-        return generate_text(self.system_prompt, user_message)
+        return generate_text(self.system_prompt,user_message)

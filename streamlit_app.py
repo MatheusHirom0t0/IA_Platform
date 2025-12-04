@@ -162,7 +162,6 @@ def detect_authenticated(reply: str, explicit_flag: bool) -> bool:
     return False
 
 
-
 def maybe_store_cpf_from_input(user_input: str) -> None:
     digits = "".join(ch for ch in user_input if ch.isdigit())
     if len(digits) == 11:
@@ -211,6 +210,7 @@ def main() -> None:
         st.session_state.messages.append({"role": "assistant", "content": welcome})
         st.session_state.started = True
 
+    # render histórico
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
@@ -264,9 +264,13 @@ def main() -> None:
         result = request_credit_increase_from_api(st.session_state.cpf, amount)
         reply = result["reply"]
 
-        st.session_state.messages.append({"role": "assistant", "content": reply})
+        # resposta do aumento + menu
+        menu_text = build_menu_text()
+        full_reply = f"{reply}\n\n{menu_text}"
+
+        st.session_state.messages.append({"role": "assistant", "content": full_reply})
         with st.chat_message("assistant"):
-            st.markdown(reply)
+            st.markdown(full_reply)
 
         st.session_state.awaiting_increase_value = False
         st.session_state.current_agent = "credit"
@@ -313,11 +317,15 @@ def main() -> None:
         result = get_credit_limit_from_api(st.session_state.cpf)
         credit_reply = result["reply"]
 
+        # resposta do limite + menu
+        menu_text = build_menu_text()
+        full_reply = f"{credit_reply}\n\n{menu_text}"
+
         st.session_state.messages.append(
-            {"role": "assistant", "content": credit_reply}
+            {"role": "assistant", "content": full_reply}
         )
         with st.chat_message("assistant"):
-            st.markdown(credit_reply)
+            st.markdown(full_reply)
 
         st.session_state.current_agent = "credit"
         st.rerun()
@@ -388,12 +396,6 @@ def main() -> None:
         st.rerun()
         return
 
-    st.session_state.messages.append({"role": "assistant", "content": reply})
-    with st.chat_message("assistant"):
-        st.markdown(reply)
-
-    st.rerun()
-    
     st.session_state.messages.append({"role": "assistant", "content": reply})
     with st.chat_message("assistant"):
         st.markdown(reply)
