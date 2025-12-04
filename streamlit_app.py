@@ -5,9 +5,9 @@ import streamlit as st
 API_BASE_URL = "http://localhost:8000"
 
 
-def send_message_to_triage(message: str) -> str:
+def send_message_to_screening(message: str) -> str:
     """TODO"""
-    url = f"{API_BASE_URL}/triage/chat"
+    url = f"{API_BASE_URL}/screening/chat"
 
     try:
         response = requests.post(url, json={"message": message}, timeout=30)
@@ -20,14 +20,13 @@ def send_message_to_triage(message: str) -> str:
             detail = data.get("detail") or data
         except Exception:
             detail = response.text
-
         return f"❌ Erro da API ({response.status_code}): {detail}"
 
     data = response.json()
     return data.get("reply", "❌ Resposta inesperada da API.")
 
 
-def init_session_state():
+def init_session_state() -> None:
     """TODO"""
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -35,17 +34,17 @@ def init_session_state():
         st.session_state.started = False
 
 
-def main():
+def main() -> None:
     """TODO"""
-    st.set_page_config(page_title="Banco Ágil - Agente de Triagem")
-    st.title("Banco Ágil - Agente de Triagem")
-    st.caption("Simulador de atendimento bancário com IA (triagem).")
+    st.set_page_config(page_title="Banco Ágil - Screening Agent")
+    st.title("Banco Ágil - Agente de Screening")
+    st.caption("Simulador de atendimento bancário com IA.")
 
     init_session_state()
 
     if not st.session_state.started:
         welcome = (
-            "Olá! Eu sou o Agente de Triagem do Banco Ágil. "
+            "Olá! Eu sou o Agente de Screening do Banco Ágil. "
             "Vou te ajudar com seu atendimento. "
             "Para começar, por favor, me informe apenas o seu CPF."
         )
@@ -68,7 +67,7 @@ def main():
         with st.chat_message("user"):
             st.markdown(user_input)
 
-        reply = send_message_to_triage(user_input)
+        reply = send_message_to_screening(user_input)
 
         st.session_state.messages.append(
             {"role": "assistant", "content": reply}

@@ -1,6 +1,5 @@
-# app/routers/auth_router.py
+"""TODO"""
 from fastapi import APIRouter
-
 from app.controllers.auth_controller import AuthController
 
 router = APIRouter(prefix="/login", tags=["auth"])

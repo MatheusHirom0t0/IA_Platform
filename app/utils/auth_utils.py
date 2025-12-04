@@ -1,38 +1,35 @@
 """TODO"""
-from pathlib import Path
-from typing import Optional
 import csv
 import os
+from pathlib import Path
+from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def extract_cpf_digits(text: str) -> str:
+
+def extract_digits(text: str) -> str:
     """TODO"""
     return "".join(ch for ch in text if ch.isdigit())
 
 
-def read_csv(file_path: Optional[str] = None):
-    """TODO"""
-    if file_path is None:
-        file_path = os.getenv("CSV_PATH")
-
-    if not file_path:
-        raise RuntimeError("CSV_PATH not found in environment variables.")
-
-    path = Path(file_path)
-
-    if not path.exists():
-        raise FileNotFoundError(f"CSV file not found: {file_path}")
-
-    with path.open("r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        return [row for row in reader]
-
-
 def clean_cpf(cpf: str) -> str:
     """TODO"""
-    return "".join(ch for ch in cpf if ch.isdigit())
+    return extract_digits(cpf)
+
+
+def read_csv(path: Optional[str] = None):
+    """TODO"""
+    path = path or os.getenv("CSV_PATH")
+    if not path:
+        raise RuntimeError("CSV_PATH not set.")
+
+    file = Path(path)
+    if not file.exists():
+        raise FileNotFoundError(f"CSV not found: {path}")
+
+    with file.open("r", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
 
 
 def validate_date(date_str: str) -> str:
@@ -61,8 +58,7 @@ def validate_date(date_str: str) -> str:
 
     return date_str
 
-
-def normalize_birth_date(raw_birth_date: str) -> str:
+def normalize_date(raw_birth_date: str) -> str:
     """TODO"""
     raw = raw_birth_date.strip()
 
@@ -98,9 +94,9 @@ def normalize_birth_date(raw_birth_date: str) -> str:
             month = raw[2:4]
             year = raw[4:8]
         else:
-            year = raw[0:4]
-            month = raw[4:6]
-            day = raw[6:8]
+            raise TypeError(
+                "Invalid date format. Use YYYY-MM-DD, DD-MM-YYYY, YYYYMMDD or DDMMYYYY."
+            )
 
         normalized = f"{year}-{month}-{day}"
         return validate_date(normalized)
