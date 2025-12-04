@@ -8,25 +8,14 @@ from app.utils.llm_client import generate_text
 
 
 class ScreeningAgent:
-    """
-    Controla o fluxo de triagem (CPF + data de nascimento) e usa uma LLM
-    apenas para gerar as respostas em linguagem natural.
-
-    Estados possíveis:
-    - ask_cpf
-    - ask_birthdate
-    - authenticated
-    - blocked
-    """
-
+    """TODO"""
     def __init__(self, auth_controller: Optional[AuthController] = None) -> None:
         self.auth = auth_controller or AuthController()
         self.max_attempts: int = 3
         self.reset()
 
-    # ---------------- ESTADO ----------------
-
     def reset(self) -> None:
+        """TODO"""
         self.cpf: Optional[str] = None
         self.birth_date: Optional[str] = None
         self.client: Optional[Dict[str, str]] = None
@@ -35,7 +24,6 @@ class ScreeningAgent:
         self.stage: str = "ask_cpf"
         self.authenticated: bool = False
 
-    # ---------------- LLM ----------------
 
     @property
     def _system_prompt(self) -> str:
@@ -64,9 +52,7 @@ class ScreeningAgent:
         )
 
     def _build_llm_message(self, context: Dict[str, Any]) -> str:
-        """
-        Monta o texto que será enviado para a LLM com base no contexto interno.
-        """
+        """TODO"""
         state = context["state"]
         user_input = context["user_input"]
         event = context["event"]
@@ -110,16 +96,10 @@ class ScreeningAgent:
             return True
         return False
 
-    # ---------------- LÓGICA PRINCIPAL ----------------
-
     def ask(self, user_input: str) -> str:
-        """
-        Processa a mensagem do usuário de acordo com o estado interno
-        e retorna a resposta em texto gerada pela LLM.
-        """
+        """TODO"""
         raw_input = user_input.strip()
 
-        # Estado bloqueado: não processa mais nada, só informa bloqueio
         if self.stage == "blocked":
             context = {
                 "state": self.stage,
@@ -132,7 +112,6 @@ class ScreeningAgent:
             }
             return self._reply_with_llm(context)
 
-        # Já autenticado: IA apenas conversa
         if self.authenticated and self.stage == "authenticated":
             context = {
                 "state": self.stage,
@@ -145,10 +124,8 @@ class ScreeningAgent:
             }
             return self._reply_with_llm(context)
 
-        # 1) PEDIR CPF
         if self.stage == "ask_cpf":
-            # Se o usuário ainda não digitou nada (pode acontecer por causa do Streamlit),
-            # apenas peça o CPF normalmente.
+
             if raw_input == "":
                 context = {
                     "state": self.stage,
@@ -178,7 +155,6 @@ class ScreeningAgent:
                 }
                 return self._reply_with_llm(context)
 
-            # CPF com 11 dígitos → procurar cliente
             client = self.auth.find_client_by_cpf(cpf_digits)
             if client is None:
                 blocked = self._increment_failed()
@@ -195,7 +171,6 @@ class ScreeningAgent:
                 }
                 return self._reply_with_llm(context)
 
-            # CPF válido e cliente encontrado → próximo passo: data de nascimento
             self.cpf = cpf_digits
             self.client = client
             self.stage = "ask_birthdate"
@@ -211,10 +186,8 @@ class ScreeningAgent:
             }
             return self._reply_with_llm(context)
 
-        # 2) PEDIR DATA DE NASCIMENTO
         if self.stage == "ask_birthdate":
 
-            # EVITA disparar erro quando ainda não digitou nada
             if raw_input == "":
                 context = {
                     "state": self.stage,
@@ -260,7 +233,6 @@ class ScreeningAgent:
                 }
                 return self._reply_with_llm(context)
 
-            # Data correta → autenticar
             self.birth_date = normalized
             self.authenticated = True
             self.stage = "authenticated"
@@ -276,7 +248,6 @@ class ScreeningAgent:
             }
             return self._reply_with_llm(context)
 
-        # Qualquer outro caso improvável → resposta genérica
         context = {
             "state": self.stage,
             "user_input": raw_input,

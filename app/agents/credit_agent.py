@@ -1,9 +1,11 @@
+"""TODO"""
 from typing import Dict
 
 from app.utils.llm_client import generate_text
 
 
 class CreditAgent:
+    """TODO"""
     def __init__(self) -> None:
         self.system_prompt = (
             "Você é o Agente de Crédito do Banco Ágil.\n"
@@ -22,6 +24,7 @@ class CreditAgent:
     # ----------------- CONSULTA DE LIMITE -----------------
 
     def build_limit_reply(self, cpf: str, limit_value: float) -> str:
+        """TODO"""
         user_message = (
             "Situação: o cliente está consultando o limite de crédito atual.\n"
             f"Dados:\n- CPF: {cpf}\n- Limite atual (numérico): {limit_value}\n\n"
@@ -30,14 +33,9 @@ class CreditAgent:
         )
 
         return generate_text(self.system_prompt, user_message)
-
-    # ----------------- PEDIDO DE AUMENTO DE LIMITE -----------------
-
+    
     def build_increase_reply(self,data: Dict[str, str]) -> str:
-        """
-        A IA não recebe NENHUM número.
-        Ela só recebe instruções sobre COMO responder.
-        """
+        """TODO"""
         status = data["status"]
 
         base_instruction = (

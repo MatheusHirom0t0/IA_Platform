@@ -1,4 +1,4 @@
-# app/routers/interview_router.py
+"""TODO"""
 from fastapi import APIRouter
 
 from app.controllers.interview_controller import InterviewController
@@ -14,6 +14,7 @@ controller = InterviewController()
 
 @router.post("", response_model=CreditInterviewResponse)
 def run_credit_interview(payload: CreditInterviewRequest) -> CreditInterviewResponse:
+    """TODO"""
     result = controller.run_interview(
         cpf=payload.cpf,
         renda_mensal=payload.renda_mensal,
@@ -22,4 +23,5 @@ def run_credit_interview(payload: CreditInterviewRequest) -> CreditInterviewResp
         numero_dependentes=payload.numero_dependentes,
         tem_dividas=payload.tem_dividas,
     )
+    print(result)
     return CreditInterviewResponse(**result)

@@ -1,6 +1,7 @@
 """Streamlit UI para o Banco Ágil - Agente de Screening."""
 from typing import Dict, List, Optional
 
+import re
 import requests
 import streamlit as st
 
@@ -223,7 +224,7 @@ def reset_screening_backend() -> None:
         pass
 
 
-# -------------------- ESTADO E HELPERS --------------------
+# -------------------- ESTADO, HELPERS E SANITIZAÇÃO --------------------
 
 
 def init_session_state() -> None:
@@ -296,6 +297,34 @@ def parse_brl_amount(raw: str) -> Optional[float]:
         return None
 
 
+def sanitize_ai_reply(text: str) -> str:
+    """
+    Remove formatação Markdown básica da resposta da IA
+    para evitar texto destacado como código/negrito/etc.
+    """
+    if not isinstance(text, str):
+        return str(text)
+
+    # remove backticks
+    text = text.replace("`", "")
+
+    # remove **negrito** e *itálico*
+    text = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", text)
+    text = re.sub(r"_([^_]+)_", r"\1", text)
+
+    # remove bullets no começo da linha (- algo, * algo)
+    lines = []
+    for line in text.splitlines():
+        line = re.sub(r"^\s*[-*]\s+", "", line)
+        lines.append(line)
+    text = "\n".join(lines)
+
+    # espaços duplicados
+    text = re.sub(r"[ ]{2,}", " ", text)
+
+    return text.strip()
+
+
 # -------------------- MAIN APP --------------------
 
 
@@ -342,7 +371,7 @@ def main() -> None:
         if amount is None:
             error_msg = (
                 "Não consegui entender o valor informado. "
-                "Por favor, digite apenas o número, por exemplo: `5000` ou `5.000,50`."
+                "Por favor, digite apenas o número, por exemplo: 5000 ou 5.000,50."
             )
             st.session_state.messages.append(
                 {"role": "assistant", "content": error_msg}
@@ -367,15 +396,16 @@ def main() -> None:
             return
 
         result = request_credit_increase_from_api(st.session_state.cpf, amount)
-        reply = result["reply"]
-
-        # resposta do aumento + menu
+        reply = sanitize_ai_reply(result["reply"])
         menu_text = build_menu_text()
-        full_reply = f"{reply}\n\n{menu_text}"
 
-        st.session_state.messages.append({"role": "assistant", "content": full_reply})
+        st.session_state.messages.append({"role": "assistant", "content": reply})
         with st.chat_message("assistant"):
-            st.markdown(full_reply)
+            st.text(reply)
+
+        st.session_state.messages.append({"role": "assistant", "content": menu_text})
+        with st.chat_message("assistant"):
+            st.markdown(menu_text)
 
         st.session_state.awaiting_increase_value = False
         st.session_state.current_agent = "credit"
@@ -397,7 +427,7 @@ def main() -> None:
             if renda is None:
                 msg = (
                     "Não consegui entender sua renda. "
-                    "Digite apenas o valor, por exemplo: `5000` ou `5.000,00`."
+                    "Digite apenas o valor, por exemplo: 5000 ou 5.000,00."
                 )
                 st.session_state.messages.append(
                     {"role": "assistant", "content": msg}
@@ -413,7 +443,7 @@ def main() -> None:
             ask = (
                 "Obrigado! Agora me informe o total aproximado das suas despesas mensais "
                 "(contas fixas, aluguel, etc). Digite apenas o valor, por exemplo: "
-                "`2500` ou `2.500,00`."
+                "2500 ou 2.500,00."
             )
             st.session_state.messages.append({"role": "assistant", "content": ask})
             with st.chat_message("assistant"):
@@ -427,7 +457,7 @@ def main() -> None:
             if despesas is None:
                 msg = (
                     "Não consegui entender suas despesas. "
-                    "Digite apenas o valor, por exemplo: `2500` ou `2.500,00`."
+                    "Digite apenas o valor, por exemplo: 2500 ou 2.500,00."
                 )
                 st.session_state.messages.append(
                     {"role": "assistant", "content": msg}
@@ -442,7 +472,7 @@ def main() -> None:
 
             ask = (
                 "Certo! Qual é o seu tipo de emprego? "
-                "Responda com uma das opções: `formal`, `autônomo` ou `desempregado`."
+                "Responda com uma das opções: formal, autônomo ou desempregado."
             )
             st.session_state.messages.append({"role": "assistant", "content": ask})
             with st.chat_message("assistant"):
@@ -456,7 +486,7 @@ def main() -> None:
             if emprego not in {"formal", "autônomo", "autonomo", "desempregado"}:
                 msg = (
                     "Não reconheci esse tipo de emprego. "
-                    "Por favor, responda apenas: `formal`, `autônomo` ou `desempregado`."
+                    "Por favor, responda apenas: formal, autônomo ou desempregado."
                 )
                 st.session_state.messages.append(
                     {"role": "assistant", "content": msg}
@@ -469,7 +499,7 @@ def main() -> None:
             data["tipo_emprego"] = emprego
             st.session_state.interview_stage = "ask_dependentes"
 
-            ask = "Quantos dependentes você possui? (Se não tiver, responda `0`)."
+            ask = "Quantos dependentes você possui? (Se não tiver, responda 0)."
             st.session_state.messages.append({"role": "assistant", "content": ask})
             with st.chat_message("assistant"):
                 st.markdown(ask)
@@ -497,7 +527,7 @@ def main() -> None:
 
             ask = (
                 "Você possui dívidas ativas (em outros bancos ou cartões)? "
-                "Responda apenas `sim` ou `não`."
+                "Responda apenas sim ou não."
             )
             st.session_state.messages.append({"role": "assistant", "content": ask})
             with st.chat_message("assistant"):
@@ -513,7 +543,7 @@ def main() -> None:
             elif answer in {"não", "nao", "n"}:
                 tem_dividas = False
             else:
-                msg = "Por favor, responda apenas `sim` ou `não`."
+                msg = "Por favor, responda apenas sim ou não."
                 st.session_state.messages.append(
                     {"role": "assistant", "content": msg}
                 )
@@ -547,16 +577,22 @@ def main() -> None:
                 numero_dependentes=data["numero_dependentes"],
                 tem_dividas=data["tem_dividas"],
             )
-            reply = result["reply"]
-
+            reply = sanitize_ai_reply(result["reply"])
             menu_text = build_menu_text()
-            full_reply = f"{reply}\n\n{menu_text}"
 
+            # 1) resposta da IA - TEXTO PURO
             st.session_state.messages.append(
-                {"role": "assistant", "content": full_reply}
+                {"role": "assistant", "content": reply}
             )
             with st.chat_message("assistant"):
-                st.markdown(full_reply)
+                st.text(reply)
+
+            # 2) menu - MARKDOWN
+            st.session_state.messages.append(
+                {"role": "assistant", "content": menu_text}
+            )
+            with st.chat_message("assistant"):
+                st.markdown(menu_text)
 
             st.session_state.interview_stage = None
             st.session_state.interview_data = {}
@@ -574,7 +610,7 @@ def main() -> None:
         parts = original_input.split()
         if len(parts) != 3:
             msg = (
-                "Não consegui entender. Informe no formato: `USD BRL 100` "
+                "Não consegui entender. Informe no formato: USD BRL 100 "
                 "(moeda de origem, moeda de destino e valor)."
             )
             st.session_state.messages.append(
@@ -590,7 +626,7 @@ def main() -> None:
         if amount is None:
             msg = (
                 "Não consegui entender o valor. "
-                "Use algo como `USD BRL 100` ou `USD BRL 1.500,00`."
+                "Use algo como: USD BRL 100 ou USD BRL 1500,00."
             )
             st.session_state.messages.append(
                 {"role": "assistant", "content": msg}
@@ -601,14 +637,17 @@ def main() -> None:
             return
 
         result = get_fx_quote_from_api(base, target, amount)
-        reply = result["reply"]
-
+        reply = sanitize_ai_reply(result["reply"])
         menu_text = build_menu_text()
-        full_reply = f"{reply}\n\n{menu_text}"
 
-        st.session_state.messages.append({"role": "assistant", "content": full_reply})
+        st.session_state.messages.append({"role": "assistant", "content": reply})
         with st.chat_message("assistant"):
-            st.markdown(full_reply)
+            st.text(reply)
+
+        st.session_state.messages.append({"role": "assistant", "content": menu_text})
+        with st.chat_message("assistant"):
+            st.markdown(menu_text)
+
 
         st.session_state.awaiting_fx_params = False
         st.session_state.current_agent = "credit"
@@ -653,17 +692,20 @@ def main() -> None:
             return
 
         result = get_credit_limit_from_api(st.session_state.cpf)
-        credit_reply = result["reply"]
-
-        # resposta do limite + menu
+        credit_reply = sanitize_ai_reply(result["reply"])
         menu_text = build_menu_text()
-        full_reply = f"{credit_reply}\n\n{menu_text}"
 
         st.session_state.messages.append(
-            {"role": "assistant", "content": full_reply}
+            {"role": "assistant", "content": credit_reply}
         )
         with st.chat_message("assistant"):
-            st.markdown(full_reply)
+            st.text(credit_reply)
+
+        st.session_state.messages.append(
+            {"role": "assistant", "content": menu_text}
+        )
+        with st.chat_message("assistant"):
+            st.markdown(menu_text)
 
         st.session_state.current_agent = "credit"
         st.rerun()
@@ -677,8 +719,8 @@ def main() -> None:
 
         ask_value = (
             "Claro! Vamos solicitar um aumento de limite. 💳\n\n"
-            "Por favor, me informe o **novo valor de limite** que você deseja, "
-            "por exemplo: `5000` ou `7.500,00`."
+            "Por favor, me informe o novo valor de limite que você deseja, "
+            "por exemplo: 5000 ou 7.500,00."
         )
         st.session_state.messages.append({"role": "assistant", "content": ask_value})
         with st.chat_message("assistant"):
@@ -700,8 +742,8 @@ def main() -> None:
 
         msg = (
             "Vamos iniciar sua entrevista de crédito. 📝\n\n"
-            "Para começar, me informe sua **renda mensal aproximada**, "
-            "por exemplo: `5000` ou `5.000,00`."
+            "Para começar, me informe sua renda mensal aproximada, "
+            "por exemplo: 5000 ou 5.000,00."
         )
         st.session_state.messages.append({"role": "assistant", "content": msg})
         with st.chat_message("assistant"):
@@ -720,7 +762,7 @@ def main() -> None:
         msg = (
             "Vamos consultar a cotação. 💱\n\n"
             "Informe a moeda de origem, a moeda de destino e o valor, "
-            "no formato: `USD BRL 100` ou `EUR BRL 2500`."
+            "no formato: USD BRL 100 ou EUR BRL 2500."
         )
         st.session_state.messages.append({"role": "assistant", "content": msg})
         with st.chat_message("assistant"):
@@ -738,7 +780,7 @@ def main() -> None:
         st.markdown(user_input)
 
     result = send_message_to_screening(user_input)
-    reply = result["reply"]
+    reply = sanitize_ai_reply(result["reply"])
 
     # Se autenticou agora → responde com mensagem + menu junto
     if not st.session_state.authenticated and detect_authenticated(

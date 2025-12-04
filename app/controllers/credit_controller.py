@@ -1,3 +1,4 @@
+"""TODO"""
 import os
 from typing import Dict
 
@@ -8,6 +9,7 @@ from app.agents.credit_agent import CreditAgent
 
 
 class CreditController:
+    """TODO"""
     def __init__(self) -> None:
         clients_csv = os.getenv("CLIENTS_CSV_PATH", "data/clientes.csv")
         score_limits_csv = os.getenv("SCORE_LIMITS_CSV_PATH", "data/score_limite.csv")
@@ -25,6 +27,7 @@ class CreditController:
         self.agent = CreditAgent()
 
     def get_limit(self, cpf: str) -> Dict[str, object]:
+        """TODO"""
         try:
             limit_value = self.service.get_current_limit(cpf)
         except ValueError:
@@ -37,6 +40,7 @@ class CreditController:
         return {"limit": limit_value, "reply": reply}
 
     def request_increase(self, cpf: str, requested_limit: float) -> Dict[str, object]:
+        """TODO"""
         try:
             result = self.service.evaluate_increase_request(cpf, requested_limit)
         except ValueError:

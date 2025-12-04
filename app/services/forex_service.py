@@ -1,18 +1,15 @@
+"""TODO"""
 from typing import Dict
 
 import requests
 
 
 class ForexService:
-    """
-    Serviço simples para consultar cotação usando uma API pública.
-    Aqui uso o Frankfurter (sem API key):
-      GET https://api.frankfurter.app/latest?from=USD&to=BRL
-    """
-
+    """TODO"""
     BASE_URL = "https://api.frankfurter.app/latest"
 
     def get_quote(self, base: str, target: str, amount: float) -> Dict[str, float]:
+        """TODO"""
         params = {"from": base.upper(), "to": target.upper()}
         try:
             resp = requests.get(self.BASE_URL, params=params, timeout=10)

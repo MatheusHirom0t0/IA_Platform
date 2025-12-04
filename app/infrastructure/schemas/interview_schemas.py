@@ -1,7 +1,9 @@
+"""TODO"""
 from pydantic import BaseModel
 
 
 class CreditInterviewRequest(BaseModel):
+    """TODO"""
     cpf: str
     renda_mensal: float
     despesas_mensais: float
@@ -11,5 +13,6 @@ class CreditInterviewRequest(BaseModel):
 
 
 class CreditInterviewResponse(BaseModel):
+    """TODO"""
     score: float
     reply: str

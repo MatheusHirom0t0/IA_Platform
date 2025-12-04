@@ -1,7 +1,9 @@
+"""TODO"""
 from app.utils.llm_client import generate_text
 
 
 class ForexAgent:
+    """TODO"""
     def __init__(self) -> None:
         self.system_prompt = (
             "Você é o Agente de Câmbio do Banco Ágil.\n"
@@ -20,6 +22,7 @@ class ForexAgent:
         rate: float,
         converted_amount: float,
     ) -> str:
+        """TODO"""
         user_message = (
             "Situação: o cliente consultou cotação de moeda.\n"
             f"Moeda de origem: {base}\n"
