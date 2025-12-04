@@ -47,7 +47,7 @@ def main():
         welcome = (
             "Olá! Eu sou o Agente de Triagem do Banco Ágil. "
             "Vou te ajudar com seu atendimento. "
-            "Para começar, por favor, me informe apenas o seu CPF (somente números). 😊"
+            "Para começar, por favor, me informe apenas o seu CPF."
         )
         st.session_state.messages.append(
             {"role": "assistant", "content": welcome}

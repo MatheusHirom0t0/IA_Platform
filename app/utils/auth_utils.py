@@ -7,8 +7,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def extract_cpf_digits(text: str) -> str:
+    """TODO"""
+    return "".join(ch for ch in text if ch.isdigit())
+
 
 def read_csv(file_path: Optional[str] = None):
+    """TODO"""
     if file_path is None:
         file_path = os.getenv("CSV_PATH")
 
@@ -26,40 +31,39 @@ def read_csv(file_path: Optional[str] = None):
 
 
 def clean_cpf(cpf: str) -> str:
+    """TODO"""
     return "".join(ch for ch in cpf if ch.isdigit())
 
 
 def validate_date(date_str: str) -> str:
+    """TODO"""
     parts = date_str.split("-")
     if len(parts) != 3:
         raise TypeError("Invalid date format. Expected YYYY-MM-DD.")
 
     year, month, day = parts
 
-    if not (year.isdigit() and month.isdigit() and day.isdigit()):
+    if any(not p.isdigit() for p in (year, month, day)):
         raise TypeError("Invalid date format. Only digits allowed.")
 
     year_i = int(year)
     month_i = int(month)
     day_i = int(day)
 
-    if not (1 <= month_i <= 12):
+    if not 1900 <= year_i <= 2100:
+        raise TypeError("Invalid year.")
+
+    if not 1 <= month_i <= 12:
         raise TypeError("Invalid month.")
 
-    if not (1 <= day_i <= 31):
+    if not 1 <= day_i <= 31:
         raise TypeError("Invalid day.")
 
     return date_str
 
 
 def normalize_birth_date(raw_birth_date: str) -> str:
-    """
-    Normaliza para YYYY-MM-DD aceitando:
-    - YYYY-MM-DD  (2000-11-30)
-    - DD-MM-YYYY  (30-11-2000)
-    - YYYYMMDD    (20001130)
-    - DDMMYYYY    (30112000)
-    """
+    """TODO"""
     raw = raw_birth_date.strip()
 
     if "-" in raw:
