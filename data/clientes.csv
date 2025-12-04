@@ -1,12 +1,2 @@
-cpf,data_nascimento,nome
-11111111111,1990-05-10,Fulano da Silva
-22222222222,1985-01-20,Ciclano Souza
-33333333333,2000-11-30,Ana Pereira
-44444444444,1978-09-12,João Mendes
-55555555555,1995-03-08,Mariana Costa
-66666666666,1989-07-25,Pedro Martins
-77777777777,1992-01-15,Julia Fernandes
-88888888888,1980-12-02,Ricardo Albuquerque
-99999999999,1975-06-18,Beatriz Moreira
-12345678900,1999-10-22,Thiago Rocha
-52189293871,2000-11-30,Matheus Rufo
+cpf,data_nascimento,nome,limite_atual,score
+52189293871,2000-11-30,Matheus Rufo,14130.00,780

@@ -1,41 +1,30 @@
-""""TODO"""
-from typing import Dict
-
-from fastapi import HTTPException
-
-from app.utils.auth_utils import (
-    read_csv,
-    clean_cpf,
-    normalize_birth_date,
-)
+"""TODO"""
+from typing import Optional, Dict, List
+from fastapi import HTTPException, status
+from app.utils.auth_utils import read_csv, clean_cpf
 
 
 class AuthController:
     """TODO"""
-    def login(self, cpf: str, birth_date: str) -> Dict:
+    def __init__(self) -> None:
+        self._clients: List[Dict[str, str]] = read_csv()
+
+    def find_client_by_cpf(self, cpf: str) -> Optional[Dict[str, str]]:
         """TODO"""
-        try:
-            normalized_birth_date = normalize_birth_date(birth_date)
-        except TypeError as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
+        target = clean_cpf(cpf)
+        for row in self._clients:
+            if clean_cpf(row["cpf"]) == target:
+                return row
+        return None
 
-        try:
-            rows = read_csv()
-        except (FileNotFoundError, RuntimeError) as exc:
-            raise HTTPException(status_code=500, detail=str(exc))
+    def login(self, cpf: str, birth_date: str) -> Dict[str, Dict[str, str]]:
+        """TODO"""
+        cleaned = clean_cpf(cpf)
+        for row in self._clients:
+            if clean_cpf(row["cpf"]) == cleaned and row["data_nascimento"] == birth_date:
+                return {"client": row}
 
-        cleaned_cpf = clean_cpf(cpf)
-
-        for row in rows:
-            row_cpf = clean_cpf(row.get("cpf", ""))
-            row_birth = row.get("data_nascimento", "")
-
-            if row_cpf == cleaned_cpf and row_birth == normalized_birth_date:
-                client = {
-                    "cpf": row_cpf,
-                    "data_nascimento": row_birth,
-                    "nome": row.get("nome", ""),
-                }
-                return {"message": "logado", "client": client}
-
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid CPF or birth date."
+        )

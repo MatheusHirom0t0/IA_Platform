@@ -1,65 +1,111 @@
 """TODO"""
-from pathlib import Path
-from typing import Optional
 import csv
 import os
+from pathlib import Path
+from typing import Optional
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
-def read_csv(file_path: Optional[str] = None):
-    if file_path is None:
-        file_path = os.getenv("CSV_PATH")
-
-    if not file_path:
-        raise RuntimeError("CSV_PATH not found in environment variables.")
-
-    path = Path(file_path)
-
-    if not path.exists():
-        raise FileNotFoundError(f"CSV file not found: {file_path}")
-
-    with path.open("r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        return [row for row in reader]
+def extract_digits(text: str) -> str:
+    """TODO"""
+    return "".join(ch for ch in text if ch.isdigit())
 
 
 def clean_cpf(cpf: str) -> str:
-    return "".join(ch for ch in cpf if ch.isdigit())
+    """TODO"""
+    return extract_digits(cpf)
+
+def extract_cpf_digits(raw_cpf: str) -> str:
+    """
+    Extrai apenas os dígitos de um CPF.
+    Exemplo: '123.456.789-00' -> '12345678900'
+    """
+    return "".join(ch for ch in raw_cpf if ch.isdigit())
+
+def normalize_birth_date(raw_birth_date: str) -> str:
+    """
+    Normaliza datas de nascimento para o formato 'YYYY-MM-DD'.
+
+    Aceita os seguintes formatos de entrada:
+    - DD/MM/YYYY   (ex: 30/11/2000)
+    - DD-MM-YYYY   (ex: 30-11-2000)
+    - YYYY/MM/DD   (ex: 2000/11/30)
+    - YYYY-MM-DD   (ex: 2000-11-30)
+    - YYYYMMDD     (ex: 20001130)
+    - DDMMYYYY     (ex: 30112000)
+
+    Lança TypeError se nenhum formato bater ou se a data for inválida.
+    """
+    raw = raw_birth_date.strip()
+
+    # Tenta múltiplos formatos conhecidos
+    formatos = [
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%Y/%m/%d",
+        "%Y-%m-%d",
+        "%Y%m%d",
+        "%d%m%Y",
+    ]
+
+    for fmt in formatos:
+        try:
+            dt = datetime.strptime(raw, fmt)
+            # Se deu certo em algum formato, normaliza para YYYY-MM-DD
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+
+    # Se nenhum formato bateu, considera inválido
+    raise TypeError("Formato de data inválido.")
+
+
+
+def read_csv(path: Optional[str] = None):
+    """TODO"""
+    path = path or os.getenv("CSV_PATH")
+    if not path:
+        raise RuntimeError("CSV_PATH not set.")
+
+    file = Path(path)
+    if not file.exists():
+        raise FileNotFoundError(f"CSV not found: {path}")
+
+    with file.open("r", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
 
 
 def validate_date(date_str: str) -> str:
+    """TODO"""
     parts = date_str.split("-")
     if len(parts) != 3:
         raise TypeError("Invalid date format. Expected YYYY-MM-DD.")
 
     year, month, day = parts
 
-    if not (year.isdigit() and month.isdigit() and day.isdigit()):
+    if any(not p.isdigit() for p in (year, month, day)):
         raise TypeError("Invalid date format. Only digits allowed.")
 
     year_i = int(year)
     month_i = int(month)
     day_i = int(day)
 
-    if not (1 <= month_i <= 12):
+    if not 1900 <= year_i <= 2100:
+        raise TypeError("Invalid year.")
+
+    if not 1 <= month_i <= 12:
         raise TypeError("Invalid month.")
 
-    if not (1 <= day_i <= 31):
+    if not 1 <= day_i <= 31:
         raise TypeError("Invalid day.")
 
     return date_str
 
-
-def normalize_birth_date(raw_birth_date: str) -> str:
-    """
-    Normaliza para YYYY-MM-DD aceitando:
-    - YYYY-MM-DD  (2000-11-30)
-    - DD-MM-YYYY  (30-11-2000)
-    - YYYYMMDD    (20001130)
-    - DDMMYYYY    (30112000)
-    """
+def normalize_date(raw_birth_date: str) -> str:
+    """TODO"""
     raw = raw_birth_date.strip()
 
     if "-" in raw:
@@ -94,9 +140,9 @@ def normalize_birth_date(raw_birth_date: str) -> str:
             month = raw[2:4]
             year = raw[4:8]
         else:
-            year = raw[0:4]
-            month = raw[4:6]
-            day = raw[6:8]
+            raise TypeError(
+                "Invalid date format. Use YYYY-MM-DD, DD-MM-YYYY, YYYYMMDD or DDMMYYYY."
+            )
 
         normalized = f"{year}-{month}-{day}"
         return validate_date(normalized)
