@@ -1,5 +1,5 @@
 """Streamlit UI para o Banco Ágil - Agente de Screening."""
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import requests
 import streamlit as st
@@ -20,13 +20,6 @@ ACTIONS: Dict[str, str] = {
 
 
 def send_message_to_screening(message: str) -> dict:
-    """
-    Envia mensagem para o agente de screening e retorna:
-    {
-        "reply": str,
-        "authenticated": bool
-    }
-    """
     url = f"{API_BASE_URL}/screening/chat"
 
     try:
@@ -55,25 +48,15 @@ def send_message_to_screening(message: str) -> dict:
     }
 
 
-def send_message_to_credit(message: str) -> dict:
-    """
-    Envia mensagem para o agente de crédito e retorna:
-    {
-        "reply": str
-    }
-
-    Espera uma rota POST /credit/chat com body:
-    { "message": "..." }
-    e resposta:
-    { "reply": "..." }
-    """
-    url = f"{API_BASE_URL}/credit/chat"
+def get_credit_limit_from_api(cpf: str) -> dict:
+    url = f"{API_BASE_URL}/credit/limit/{cpf}"
 
     try:
-        response = requests.post(url, json={"message": message}, timeout=30)
+        response = requests.get(url, timeout=30)
     except requests.RequestException as exc:
         return {
             "reply": f"❌ Erro ao conectar com a API de crédito: {exc}",
+            "limit": None,
         }
 
     if response.status_code != 200:
@@ -84,19 +67,57 @@ def send_message_to_credit(message: str) -> dict:
             detail = response.text
         return {
             "reply": f"❌ Erro da API de crédito ({response.status_code}): {detail}",
+            "limit": None,
         }
 
     data = response.json()
     return {
-        "reply": data.get("reply", "❌ Resposta inesperada da API de crédito."),
+        "reply": data.get(
+            "reply",
+            "❌ Resposta inesperada da API de crédito ao consultar limite.",
+        ),
+        "limit": data.get("limit"),
+    }
+
+
+def request_credit_increase_from_api(cpf: str, requested_limit: float) -> dict:
+    """
+    POST /credit/increase
+    body: { "cpf": "...", "requested_limit": 1234.56 }
+    """
+    url = f"{API_BASE_URL}/credit/increase"
+    payload = {"cpf": cpf, "requested_limit": requested_limit}
+
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+    except requests.RequestException as exc:
+        return {
+            "reply": f"❌ Erro ao conectar com a API de crédito: {exc}",
+            "data": None,
+        }
+
+    if response.status_code != 200:
+        try:
+            data = response.json()
+            detail = data.get("detail") or data
+        except Exception:
+            detail = response.text
+        return {
+            "reply": f"❌ Erro da API de crédito ({response.status_code}): {detail}",
+            "data": None,
+        }
+
+    data = response.json()
+    return {
+        "reply": data.get(
+            "reply",
+            "❌ Resposta inesperada da API de crédito ao solicitar aumento.",
+        ),
+        "data": data.get("data"),
     }
 
 
 def reset_screening_backend() -> None:
-    """
-    Chama o endpoint de reset do agente de triagem.
-    Ignora erros de conexão para não quebrar o front.
-    """
     try:
         requests.post(f"{API_BASE_URL}/screening/reset", timeout=5)
     except requests.RequestException:
@@ -107,7 +128,6 @@ def reset_screening_backend() -> None:
 
 
 def init_session_state() -> None:
-    """Inicializa o estado da sessão do Streamlit."""
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "started" not in st.session_state:
@@ -115,15 +135,14 @@ def init_session_state() -> None:
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
     if "current_agent" not in st.session_state:
-        # screening, menu, credit, etc (se quiser expandir depois)
         st.session_state.current_agent = "screening"
+    if "cpf" not in st.session_state:
+        st.session_state.cpf: Optional[str] = None
+    if "awaiting_increase_value" not in st.session_state:
+        st.session_state.awaiting_increase_value = False
 
 
 def build_menu_text() -> str:
-    """
-    Monta o menu com cada opção em UMA LINHA,
-    usando lista em markdown.
-    """
     lines: List[str] = ["**Selecione uma das opções:**", ""]
     for num, label in ACTIONS.items():
         lines.append(f"- **{num}** {label}")
@@ -131,11 +150,6 @@ def build_menu_text() -> str:
 
 
 def detect_authenticated(reply: str, explicit_flag: bool) -> bool:
-    """
-    Detecta se está autenticado:
-    - Usa o flag explícito da API se vier;
-    - OU tenta detectar por texto da resposta.
-    """
     if explicit_flag:
         return True
 
@@ -148,18 +162,46 @@ def detect_authenticated(reply: str, explicit_flag: bool) -> bool:
     return False
 
 
+
+def maybe_store_cpf_from_input(user_input: str) -> None:
+    digits = "".join(ch for ch in user_input if ch.isdigit())
+    if len(digits) == 11:
+        st.session_state.cpf = digits
+
+
+def parse_brl_amount(raw: str) -> Optional[float]:
+    """
+    Converte strings tipo:
+    - "5000"
+    - "5.000"
+    - "5.000,50"
+    - "5000,50"
+    em float (5000.0, 5000.5, etc).
+    """
+    text = raw.strip().replace("R$", "").replace(" ", "")
+    if "," in text and "." in text:
+        text = text.replace(".", "").replace(",", ".")
+    elif "," in text:
+        text = text.replace(",", ".")
+    try:
+        value = float(text)
+        if value <= 0:
+            return None
+        return value
+    except ValueError:
+        return None
+
+
 # -------------------- MAIN APP --------------------
 
 
 def main() -> None:
-    """Aplicação Streamlit principal."""
     st.set_page_config(page_title="Banco Ágil - Agente de Screening")
     st.title("Banco Ágil - Agente de Screening")
     st.caption("Simulador de atendimento bancário com IA.")
 
     init_session_state()
 
-    # Mensagem inicial
     if not st.session_state.started:
         welcome = (
             "Olá! Eu sou o Agente de Screening do Banco Ágil. "
@@ -169,14 +211,12 @@ def main() -> None:
         st.session_state.messages.append({"role": "assistant", "content": welcome})
         st.session_state.started = True
 
-    # Renderizar histórico
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
     st.divider()
 
-    # Input do usuário
     user_input = st.chat_input("Digite sua mensagem...")
 
     if not user_input:
@@ -184,37 +224,94 @@ def main() -> None:
 
     original_input = user_input.strip()
 
-    # ---------------- OPCÕES NUMÉRICAS PÓS-AUTENTICAÇÃO ----------------
-    # 5 → encerra conversa e volta pro início (CPF)
-    if st.session_state.authenticated and original_input == "5":
-        # Mostra o que o usuário digitou
+    if not st.session_state.authenticated:
+        maybe_store_cpf_from_input(original_input)
+
+    # ---------------- TRATAMENTO DE VALOR PARA AUMENTO DE LIMITE ----------------
+    if st.session_state.authenticated and st.session_state.awaiting_increase_value:
         st.session_state.messages.append({"role": "user", "content": original_input})
         with st.chat_message("user"):
             st.markdown(original_input)
 
-        # Opcional: pode mostrar uma mensagem de encerramento antes de resetar
+        amount = parse_brl_amount(original_input)
+        if amount is None:
+            error_msg = (
+                "Não consegui entender o valor informado. "
+                "Por favor, digite apenas o número, por exemplo: `5000` ou `5.000,50`."
+            )
+            st.session_state.messages.append(
+                {"role": "assistant", "content": error_msg}
+            )
+            with st.chat_message("assistant"):
+                st.markdown(error_msg)
+            st.rerun()
+            return
+
+        if not st.session_state.cpf:
+            error_msg = (
+                "❌ Não consegui identificar seu CPF na sessão. "
+                "Por favor, finalize a conversa e inicie novamente."
+            )
+            st.session_state.messages.append(
+                {"role": "assistant", "content": error_msg}
+            )
+            with st.chat_message("assistant"):
+                st.markdown(error_msg)
+            st.session_state.awaiting_increase_value = False
+            st.rerun()
+            return
+
+        result = request_credit_increase_from_api(st.session_state.cpf, amount)
+        reply = result["reply"]
+
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+        with st.chat_message("assistant"):
+            st.markdown(reply)
+
+        st.session_state.awaiting_increase_value = False
+        st.session_state.current_agent = "credit"
+        st.rerun()
+        return
+
+    # ---------------- OPCÕES NUMÉRICAS PÓS-AUTENTICAÇÃO ----------------
+
+    # 5 → encerra conversa e volta pro início
+    if st.session_state.authenticated and original_input == "5":
+        st.session_state.messages.append({"role": "user", "content": original_input})
+        with st.chat_message("user"):
+            st.markdown(original_input)
+
         goodbye = "Sessão encerrada. Vamos começar de novo? Informe seu CPF. 👋"
         st.session_state.messages.append({"role": "assistant", "content": goodbye})
         with st.chat_message("assistant"):
             st.markdown(goodbye)
 
-        # Reset backend (agente volta para ask_cpf)
         reset_screening_backend()
-
-        # Reset frontend (limpa tudo e recomeça)
         st.session_state.clear()
         st.rerun()
         return
 
-    # 1 → chama agente de crédito (consultar limite)
+    # 1 → consultar limite
     if st.session_state.authenticated and original_input == "1":
         st.session_state.messages.append({"role": "user", "content": original_input})
         with st.chat_message("user"):
             st.markdown(original_input)
 
-        # Aqui você pode mudar a mensagem de comando que será enviada ao agente de crédito
-        credit_result = send_message_to_credit("consultar limite de crédito")
-        credit_reply = credit_result["reply"]
+        if not st.session_state.cpf:
+            error_msg = (
+                "❌ Não consegui identificar seu CPF na sessão. "
+                "Por favor, finalize a conversa e inicie novamente."
+            )
+            st.session_state.messages.append(
+                {"role": "assistant", "content": error_msg}
+            )
+            with st.chat_message("assistant"):
+                st.markdown(error_msg)
+            st.rerun()
+            return
+
+        result = get_credit_limit_from_api(st.session_state.cpf)
+        credit_reply = result["reply"]
 
         st.session_state.messages.append(
             {"role": "assistant", "content": credit_reply}
@@ -226,13 +323,36 @@ def main() -> None:
         st.rerun()
         return
 
-    # 2, 3, 4 ainda não implementados → placeholder
-    if st.session_state.authenticated and original_input in {"2", "3", "4"}:
+    # 2 → solicitar aumento de limite
+    if st.session_state.authenticated and original_input == "2":
         st.session_state.messages.append({"role": "user", "content": original_input})
         with st.chat_message("user"):
             st.markdown(original_input)
 
-        reply = "Essa opção ainda não foi implementada neste protótipo. 😉"
+        ask_value = (
+            "Claro! Vamos solicitar um aumento de limite. 💳\n\n"
+            "Por favor, me informe o **novo valor de limite** que você deseja, "
+            "por exemplo: `5000` ou `7.500,00`."
+        )
+        st.session_state.messages.append({"role": "assistant", "content": ask_value})
+        with st.chat_message("assistant"):
+            st.markdown(ask_value)
+
+        st.session_state.awaiting_increase_value = True
+        st.session_state.current_agent = "credit"
+        st.rerun()
+        return
+
+    # 3, 4 ainda não implementados
+    if st.session_state.authenticated and original_input in {"3", "4"}:
+        st.session_state.messages.append({"role": "user", "content": original_input})
+        with st.chat_message("user"):
+            st.markdown(original_input)
+
+        reply = (
+            "Essa opção ainda não foi implementada no front deste protótipo. 😉\n\n"
+            "No backend, teremos rotas específicas para entrevista de crédito e cotação de moeda."
+        )
         st.session_state.messages.append({"role": "assistant", "content": reply})
         with st.chat_message("assistant"):
             st.markdown(reply)
@@ -241,7 +361,7 @@ def main() -> None:
         return
 
     # ---------------- FLUXO NORMAL (SCREENING) ----------------
-    # Se ainda não autenticou ou está enviando texto livre
+
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
@@ -268,7 +388,12 @@ def main() -> None:
         st.rerun()
         return
 
-    # Caso normal (não autenticou ainda ou já estava autenticado e mandou texto livre)
+    st.session_state.messages.append({"role": "assistant", "content": reply})
+    with st.chat_message("assistant"):
+        st.markdown(reply)
+
+    st.rerun()
+    
     st.session_state.messages.append({"role": "assistant", "content": reply})
     with st.chat_message("assistant"):
         st.markdown(reply)

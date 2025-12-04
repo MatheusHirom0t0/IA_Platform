@@ -3,6 +3,7 @@ import csv
 import os
 from pathlib import Path
 from typing import Optional
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,6 +17,51 @@ def extract_digits(text: str) -> str:
 def clean_cpf(cpf: str) -> str:
     """TODO"""
     return extract_digits(cpf)
+
+def extract_cpf_digits(raw_cpf: str) -> str:
+    """
+    Extrai apenas os dígitos de um CPF.
+    Exemplo: '123.456.789-00' -> '12345678900'
+    """
+    return "".join(ch for ch in raw_cpf if ch.isdigit())
+
+def normalize_birth_date(raw_birth_date: str) -> str:
+    """
+    Normaliza datas de nascimento para o formato 'YYYY-MM-DD'.
+
+    Aceita os seguintes formatos de entrada:
+    - DD/MM/YYYY   (ex: 30/11/2000)
+    - DD-MM-YYYY   (ex: 30-11-2000)
+    - YYYY/MM/DD   (ex: 2000/11/30)
+    - YYYY-MM-DD   (ex: 2000-11-30)
+    - YYYYMMDD     (ex: 20001130)
+    - DDMMYYYY     (ex: 30112000)
+
+    Lança TypeError se nenhum formato bater ou se a data for inválida.
+    """
+    raw = raw_birth_date.strip()
+
+    # Tenta múltiplos formatos conhecidos
+    formatos = [
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%Y/%m/%d",
+        "%Y-%m-%d",
+        "%Y%m%d",
+        "%d%m%Y",
+    ]
+
+    for fmt in formatos:
+        try:
+            dt = datetime.strptime(raw, fmt)
+            # Se deu certo em algum formato, normaliza para YYYY-MM-DD
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+
+    # Se nenhum formato bateu, considera inválido
+    raise TypeError("Formato de data inválido.")
+
 
 
 def read_csv(path: Optional[str] = None):

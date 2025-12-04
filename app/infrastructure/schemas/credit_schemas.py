@@ -1,10 +1,17 @@
-from pydantic import BaseModel
+from typing import Dict
+from pydantic import BaseModel, Field
 
 
-class CreditRequest(BaseModel):
+class CreditLimitResponse(BaseModel):
+    limit: float
+    reply: str
+
+
+class CreditIncreaseRequest(BaseModel):
     cpf: str
-    message: str
+    requested_limit: float = Field(gt=0)
 
 
-class CreditResponse(BaseModel):
+class CreditIncreaseResponse(BaseModel):
+    data: Dict[str, str]
     reply: str
