@@ -6,9 +6,7 @@ API_BASE_URL = "http://localhost:8000"
 
 
 def send_message_to_triage(message: str) -> str:
-    """
-    Envia uma mensagem para a rota /triage/chat e retorna a resposta do agente.
-    """
+    """TODO"""
     url = f"{API_BASE_URL}/triage/chat"
 
     try:
@@ -17,7 +15,6 @@ def send_message_to_triage(message: str) -> str:
         return f"❌ Erro ao conectar com a API: {exc}"
 
     if response.status_code != 200:
-        # tenta pegar detalhe de erro, se houver
         try:
             data = response.json()
             detail = data.get("detail") or data
@@ -27,24 +24,21 @@ def send_message_to_triage(message: str) -> str:
         return f"❌ Erro da API ({response.status_code}): {detail}"
 
     data = response.json()
-    # espera formato {"reply": "..."}
     return data.get("reply", "❌ Resposta inesperada da API.")
 
 
 def init_session_state():
-    """
-    Inicializa as variáveis de sessão para o chat, se ainda não existirem.
-    """
+    """TODO"""
     if "messages" not in st.session_state:
-        # cada mensagem: {"role": "user"|"assistant", "content": "texto"}
         st.session_state.messages = []
     if "started" not in st.session_state:
         st.session_state.started = False
 
 
 def main():
-    st.set_page_config(page_title="Banco Ágil - Agente de Triagem", page_icon="🏦")
-    st.title("🏦 Banco Ágil - Agente de Triagem")
+    """TODO"""
+    st.set_page_config(page_title="Banco Ágil - Agente de Triagem")
+    st.title("Banco Ágil - Agente de Triagem")
     st.caption("Simulador de atendimento bancário com IA (triagem).")
 
     init_session_state()
@@ -80,7 +74,6 @@ def main():
             {"role": "assistant", "content": reply}
         )
 
-        # exibe resposta no chat
         with st.chat_message("assistant"):
             st.markdown(reply)
 

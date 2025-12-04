@@ -29,8 +29,6 @@ class TriageAgent:
         self.failed_attempts: int = 0
         self.max_attempts: int = 3
 
-        # estágio da conversa:
-        # "ask_cpf", "ask_birth_date", "authenticated", "blocked"
         self.stage: str = "ask_cpf"
 
     def _reset_credentials(self) -> None:
@@ -44,7 +42,6 @@ class TriageAgent:
         digits = "".join(ch for ch in text if ch.isdigit())
         return digits
 
-    # ----------------- CORE ----------------- #
 
     def ask(self, user_input: str) -> str:
         """
@@ -52,7 +49,6 @@ class TriageAgent:
         Sem IA, só regra fixa. Ideal para garantir o fluxo CPF -> data -> login.
         """
 
-        # já bloqueado
         if self.stage == "blocked":
             return (
                 "Não foi possível autenticar seus dados após várias tentativas. "
@@ -60,7 +56,6 @@ class TriageAgent:
                 "Por favor, tente novamente mais tarde."
             )
 
-        # 1) Perguntar CPF
         if self.stage == "ask_cpf":
             cpf_digits = self._extract_cpf_digits(user_input)
 
@@ -81,7 +76,6 @@ class TriageAgent:
                 "- DDMMYYYY    (ex: 30112000)"
             )
 
-        # 2) Perguntar data de nascimento
         if self.stage == "ask_birth_date":
             try:
                 normalized_date = normalize_birth_date(user_input.strip())
@@ -96,13 +90,11 @@ class TriageAgent:
 
             self.birth_date = normalized_date
 
-            # tenta autenticar
             try:
                 result = self.auth_controller.login(
                     cpf=self.cpf,
                     birth_date=self.birth_date,
                 )
-                # sucesso
                 self.authenticated = True
                 self.client_data = result.get("client")
                 self.stage = "authenticated"
@@ -121,7 +113,6 @@ class TriageAgent:
                 )
 
             except HTTPException as exc:
-                # credenciais inválidas
                 if exc.status_code == 401:
                     self.failed_attempts += 1
 
@@ -133,7 +124,6 @@ class TriageAgent:
                             "Se os dados estiverem corretos, por favor, procure o suporte do banco."
                         )
 
-                    # ainda pode tentar de novo
                     self._reset_credentials()
                     return (
                         "❌ Não encontrei nenhum cliente com esse CPF e data de nascimento.\n"
@@ -141,14 +131,12 @@ class TriageAgent:
                         "Por favor, envie novamente o seu CPF (apenas números)."
                     )
 
-                # outros erros (ex: erro ao ler CSV)
                 self._reset_credentials()
                 return (
                     "Tive um problema ao acessar seus dados agora (erro interno). "
                     "Por favor, tente novamente em alguns minutos."
                 )
 
-        # 3) Já autenticado (aqui entra o redirecionamento pra outros agentes depois)
         if self.stage == "authenticated":
             return (
                 "Você já está autenticado! 😄\n"
@@ -156,7 +144,6 @@ class TriageAgent:
                 "aumento de limite, entrevista de crédito ou câmbio?"
             )
 
-        # fallback inesperado
         self._reset_credentials()
         return (
             "Tive um problema para entender seu estado de atendimento. "
