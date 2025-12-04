@@ -12,3 +12,9 @@ def chat(payload: ScreeningRequest) -> ScreeningResponse:
     """TODO"""
     reply = agent.ask(payload.message)
     return ScreeningResponse(reply=reply)
+
+@router.post("/reset")
+def reset_screening():
+    """TODO"""
+    agent.reset()
+    return {"message": "reset ok"}
