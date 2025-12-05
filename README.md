@@ -142,10 +142,10 @@ app/
 
 
 
-# Observação: Trabalho com uma estrutura diferente da feita aqui mas, para evitar overengineering, optei por uma estrutura diferente. Conseguiria trabalhar com erros em camadas diferentes mas visando uma aplicação mais simplificada, optei por essa arquitetura.
+### Observação: Trabalho com uma estrutura diferente da feita aqui mas, para evitar overengineering, optei por uma estrutura diferente. Conseguiria trabalhar com erros em camadas diferentes mas visando uma aplicação mais simplificada, optei por essa arquitetura.
 
 
-# Ferramentas para qualidade de Código:
+### Ferramentas para qualidade de Código:
 1. *Pylint* foi utilizado para garantir padronização e boa qualidade do código, 
 verificando desde formatação (como limite de caracteres por linha) até possíveis erros estruturais.
 
