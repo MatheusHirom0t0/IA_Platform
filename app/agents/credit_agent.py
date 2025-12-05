@@ -21,8 +21,6 @@ class CreditAgent:
             "- Cite cada valor (limite atual, solicitado, máximo permitido) no máximo uma vez.\n"
         )
 
-    # ----------------- CONSULTA DE LIMITE -----------------
-
     def build_limit_reply(self, cpf: str, limit_value: float) -> str:
         """TODO"""
         user_message = (

@@ -30,11 +30,11 @@ class CreditController:
         """TODO"""
         try:
             limit_value = self.service.get_current_limit(cpf)
-        except ValueError:
+        except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Client not found",
-            )
+            ) from exc
 
         reply = self.agent.build_limit_reply(cpf, limit_value)
         return {"limit": limit_value, "reply": reply}
@@ -43,11 +43,11 @@ class CreditController:
         """TODO"""
         try:
             result = self.service.evaluate_increase_request(cpf, requested_limit)
-        except ValueError:
+        except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Client not found",
-            )
+            ) from exc
 
         reply = self.agent.build_increase_reply(result)
         return {"data": result, "reply": reply}
