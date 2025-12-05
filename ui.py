@@ -1,334 +1,24 @@
-"""Streamlit UI para o Banco Ágil - Agente de Screening."""
-from typing import Dict, List, Optional
-
-import re
-import requests
+"""TODO"""
 import streamlit as st
 
-API_BASE_URL = "http://localhost:8000"
+from frontend.service.screening_service import (
+    send_message_to_screening,
+    reset_screening_backend,
+)
+from frontend.service.credit_service import (
+    get_credit_limit,
+    request_credit_increase,
+)
+from frontend.service.interview_service import run_credit_interview
+from frontend.service.forex_service import get_fx_quote
 
-# Mapeamento fixo de opções exibidas no menu
-ACTIONS: Dict[str, str] = {
-    "1": "Consultar limite de crédito",
-    "2": "Solicitar aumento de limite",
-    "3": "Iniciar entrevista de crédito",
-    "4": "Consultar cotação de moeda",
-    "5": "Encerrar conversa",
-}
-
-
-# -------------------- CHAMADAS DE API --------------------
-
-
-def send_message_to_screening(message: str) -> dict:
-    url = f"{API_BASE_URL}/screening/chat"
-
-    try:
-        response = requests.post(url, json={"message": message}, timeout=30)
-    except requests.RequestException as exc:
-        return {
-            "reply": f"❌ Erro ao conectar com a API de screening: {exc}",
-            "authenticated": False,
-        }
-
-    if response.status_code != 200:
-        try:
-            data = response.json()
-            detail = data.get("detail") or data
-        except Exception:
-            detail = response.text
-        return {
-            "reply": f"❌ Erro da API de screening ({response.status_code}): {detail}",
-            "authenticated": False,
-        }
-
-    data = response.json()
-    return {
-        "reply": data.get("reply", "❌ Resposta inesperada da API de screening."),
-        "authenticated": data.get("authenticated", False),
-    }
-
-
-def get_credit_limit_from_api(cpf: str) -> dict:
-    url = f"{API_BASE_URL}/credit/limit/{cpf}"
-
-    try:
-        response = requests.get(url, timeout=30)
-    except requests.RequestException as exc:
-        return {
-            "reply": f"❌ Erro ao conectar com a API de crédito: {exc}",
-            "limit": None,
-        }
-
-    if response.status_code != 200:
-        try:
-            data = response.json()
-            detail = data.get("detail") or data
-        except Exception:
-            detail = response.text
-        return {
-            "reply": f"❌ Erro da API de crédito ({response.status_code}): {detail}",
-            "limit": None,
-        }
-
-    data = response.json()
-    return {
-        "reply": data.get(
-            "reply",
-            "❌ Resposta inesperada da API de crédito ao consultar limite.",
-        ),
-        "limit": data.get("limit"),
-    }
-
-
-def request_credit_increase_from_api(cpf: str, requested_limit: float) -> dict:
-    """
-    POST /credit/increase
-    body: { "cpf": "...", "requested_limit": 1234.56 }
-    """
-    url = f"{API_BASE_URL}/credit/increase"
-    payload = {"cpf": cpf, "requested_limit": requested_limit}
-
-    try:
-        response = requests.post(url, json=payload, timeout=30)
-    except requests.RequestException as exc:
-        return {
-            "reply": f"❌ Erro ao conectar com a API de crédito: {exc}",
-            "data": None,
-        }
-
-    if response.status_code != 200:
-        try:
-            data = response.json()
-            detail = data.get("detail") or data
-        except Exception:
-            detail = response.text
-        return {
-            "reply": f"❌ Erro da API de crédito ({response.status_code}): {detail}",
-            "data": None,
-        }
-
-    data = response.json()
-    return {
-        "reply": data.get(
-            "reply",
-            "❌ Resposta inesperada da API de crédito ao solicitar aumento.",
-        ),
-        "data": data.get("data"),
-    }
-
-
-def run_credit_interview_from_api(
-    cpf: str,
-    renda_mensal: float,
-    despesas_mensais: float,
-    tipo_emprego: str,
-    numero_dependentes: int,
-    tem_dividas: bool,
-) -> dict:
-    """
-    POST /interview
-    body:
-    {
-        "cpf": "...",
-        "renda_mensal": ...,
-        "despesas_mensais": ...,
-        "tipo_emprego": "...",
-        "numero_dependentes": ...,
-        "tem_dividas": true/false
-    }
-    """
-    url = f"{API_BASE_URL}/interview"
-    payload = {
-        "cpf": cpf,
-        "renda_mensal": renda_mensal,
-        "despesas_mensais": despesas_mensais,
-        "tipo_emprego": tipo_emprego,
-        "numero_dependentes": numero_dependentes,
-        "tem_dividas": tem_dividas,
-    }
-
-    try:
-        response = requests.post(url, json=payload, timeout=30)
-    except requests.RequestException as exc:
-        return {
-            "reply": f"❌ Erro ao conectar com a API de entrevista de crédito: {exc}",
-            "score": None,
-        }
-
-    if response.status_code != 200:
-        try:
-            data = response.json()
-            detail = data.get("detail") or data
-        except Exception:
-            detail = response.text
-        return {
-            "reply": f"❌ Erro da API de entrevista de crédito ({response.status_code}): {detail}",
-            "score": None,
-        }
-
-    data = response.json()
-    return {
-        "reply": data.get(
-            "reply",
-            "❌ Resposta inesperada da API de entrevista de crédito.",
-        ),
-        "score": data.get("score"),
-    }
-
-
-def get_fx_quote_from_api(base: str, target: str, amount: float) -> dict:
-    """
-    POST /forex/quote
-    body: { "base": "USD", "target": "BRL", "amount": 100.0 }
-    """
-    url = f"{API_BASE_URL}/forex/quote"
-    payload = {"base": base, "target": target, "amount": amount}
-
-    try:
-        response = requests.post(url, json=payload, timeout=30)
-    except requests.RequestException as exc:
-        return {
-            "reply": f"❌ Erro ao conectar com a API de câmbio: {exc}",
-            "rate": None,
-            "converted_amount": None,
-        }
-
-    if response.status_code != 200:
-        try:
-            data = response.json()
-            detail = data.get("detail") or data
-        except Exception:
-            detail = response.text
-        return {
-            "reply": f"❌ Erro da API de câmbio ({response.status_code}): {detail}",
-            "rate": None,
-            "converted_amount": None,
-        }
-
-    data = response.json()
-    return {
-        "reply": data.get(
-            "reply",
-            "❌ Resposta inesperada da API de câmbio.",
-        ),
-        "rate": data.get("rate"),
-        "converted_amount": data.get("converted_amount"),
-    }
-
-
-def reset_screening_backend() -> None:
-    try:
-        requests.post(f"{API_BASE_URL}/screening/reset", timeout=5)
-    except requests.RequestException:
-        pass
-
-
-# -------------------- ESTADO, HELPERS E SANITIZAÇÃO --------------------
-
-
-def init_session_state() -> None:
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    if "started" not in st.session_state:
-        st.session_state.started = False
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-    if "current_agent" not in st.session_state:
-        st.session_state.current_agent = "screening"
-    if "cpf" not in st.session_state:
-        st.session_state.cpf: Optional[str] = None
-    if "awaiting_increase_value" not in st.session_state:
-        st.session_state.awaiting_increase_value = False
-    if "interview_stage" not in st.session_state:
-        st.session_state.interview_stage: Optional[str] = None
-    if "interview_data" not in st.session_state:
-        st.session_state.interview_data = {}
-    if "awaiting_fx_params" not in st.session_state:
-        st.session_state.awaiting_fx_params = False
-
-
-def build_menu_text() -> str:
-    lines: List[str] = ["**Selecione uma das opções:**", ""]
-    for num, label in ACTIONS.items():
-        lines.append(f"- **{num}** {label}")
-    return "\n".join(lines)
-
-
-def detect_authenticated(reply: str, explicit_flag: bool) -> bool:
-    if explicit_flag:
-        return True
-
-    text = reply.lower()
-    if "autenticação realizada com sucesso" in text:
-        return True
-    if "você já está autenticado" in text:
-        return True
-
-    return False
-
-
-def maybe_store_cpf_from_input(user_input: str) -> None:
-    digits = "".join(ch for ch in user_input if ch.isdigit())
-    if len(digits) == 11:
-        st.session_state.cpf = digits
-
-
-def parse_brl_amount(raw: str) -> Optional[float]:
-    """
-    Converte strings tipo:
-    - "5000"
-    - "5.000"
-    - "5.000,50"
-    - "5000,50"
-    em float (5000.0, 5000.5, etc).
-    """
-    text = raw.strip().replace("R$", "").replace(" ", "")
-    if "," in text and "." in text:
-        text = text.replace(".", "").replace(",", ".")
-    elif "," in text:
-        text = text.replace(",", ".")
-    try:
-        value = float(text)
-        if value <= 0:
-            return None
-        return value
-    except ValueError:
-        return None
-
-
-def sanitize_ai_reply(text: str) -> str:
-    """
-    Remove formatação Markdown básica da resposta da IA
-    para evitar texto destacado como código/negrito/etc.
-    """
-    if not isinstance(text, str):
-        return str(text)
-
-    # remove backticks
-    text = text.replace("`", "")
-
-    # remove **negrito** e *itálico*
-    text = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", text)
-    text = re.sub(r"_([^_]+)_", r"\1", text)
-
-    # remove bullets no começo da linha (- algo, * algo)
-    lines = []
-    for line in text.splitlines():
-        line = re.sub(r"^\s*[-*]\s+", "", line)
-        lines.append(line)
-    text = "\n".join(lines)
-
-    # espaços duplicados
-    text = re.sub(r"[ ]{2,}", " ", text)
-
-    return text.strip()
-
-
-# -------------------- MAIN APP --------------------
+from frontend.state.session import init_session_state, maybe_store_cpf_from_input
+from frontend.ui.formatting import parse_brl_amount, sanitize_ai_reply
+from frontend.ui.menu import build_menu_text
 
 
 def main() -> None:
+    """TODO"""
     st.set_page_config(page_title="Banco Ágil - Agente de Screening")
     st.title("Banco Ágil - Agente de Screening")
     st.caption("Simulador de atendimento bancário com IA.")
@@ -341,16 +31,20 @@ def main() -> None:
             "Vou te ajudar com seu atendimento. "
             "Para começar, por favor, me informe apenas o seu CPF."
         )
-        st.session_state.messages.append({"role": "assistant", "content": welcome})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": welcome, "mode": "markdown"}
+        )
         st.session_state.started = True
 
-    # render histórico
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+            mode = msg.get("mode", "markdown")
+            if mode == "text":
+                st.text(msg["content"])
+            else:
+                st.markdown(msg["content"])
 
     st.divider()
-
     user_input = st.chat_input("Digite sua mensagem...")
 
     if not user_input:
@@ -361,9 +55,10 @@ def main() -> None:
     if not st.session_state.authenticated:
         maybe_store_cpf_from_input(original_input)
 
-    # ---------------- TRATAMENTO DE VALOR PARA AUMENTO DE LIMITE ----------------
     if st.session_state.authenticated and st.session_state.awaiting_increase_value:
-        st.session_state.messages.append({"role": "user", "content": original_input})
+        st.session_state.messages.append(
+            {"role": "user", "content": original_input, "mode": "markdown"}
+        )
         with st.chat_message("user"):
             st.markdown(original_input)
 
@@ -374,7 +69,7 @@ def main() -> None:
                 "Por favor, digite apenas o número, por exemplo: 5000 ou 5.000,50."
             )
             st.session_state.messages.append(
-                {"role": "assistant", "content": error_msg}
+                {"role": "assistant", "content": error_msg, "mode": "markdown"}
             )
             with st.chat_message("assistant"):
                 st.markdown(error_msg)
@@ -387,7 +82,7 @@ def main() -> None:
                 "Por favor, finalize a conversa e inicie novamente."
             )
             st.session_state.messages.append(
-                {"role": "assistant", "content": error_msg}
+                {"role": "assistant", "content": error_msg, "mode": "markdown"}
             )
             with st.chat_message("assistant"):
                 st.markdown(error_msg)
@@ -395,15 +90,19 @@ def main() -> None:
             st.rerun()
             return
 
-        result = request_credit_increase_from_api(st.session_state.cpf, amount)
+        result = request_credit_increase(st.session_state.cpf, amount)
         reply = sanitize_ai_reply(result["reply"])
         menu_text = build_menu_text()
 
-        st.session_state.messages.append({"role": "assistant", "content": reply})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": reply, "mode": "text"}
+        )
         with st.chat_message("assistant"):
             st.text(reply)
 
-        st.session_state.messages.append({"role": "assistant", "content": menu_text})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": menu_text, "mode": "markdown"}
+        )
         with st.chat_message("assistant"):
             st.markdown(menu_text)
 
@@ -412,16 +111,16 @@ def main() -> None:
         st.rerun()
         return
 
-    # ---------------- FLUXO DE ENTREVISTA DE CRÉDITO ----------------
     if st.session_state.authenticated and st.session_state.interview_stage is not None:
-        st.session_state.messages.append({"role": "user", "content": original_input})
+        st.session_state.messages.append(
+            {"role": "user", "content": original_input, "mode": "markdown"}
+        )
         with st.chat_message("user"):
             st.markdown(original_input)
 
         stage = st.session_state.interview_stage
         data = st.session_state.interview_data
 
-        # 1) Renda mensal
         if stage == "ask_renda":
             renda = parse_brl_amount(original_input)
             if renda is None:
@@ -430,7 +129,7 @@ def main() -> None:
                     "Digite apenas o valor, por exemplo: 5000 ou 5.000,00."
                 )
                 st.session_state.messages.append(
-                    {"role": "assistant", "content": msg}
+                    {"role": "assistant", "content": msg, "mode": "markdown"}
                 )
                 with st.chat_message("assistant"):
                     st.markdown(msg)
@@ -445,13 +144,14 @@ def main() -> None:
                 "(contas fixas, aluguel, etc). Digite apenas o valor, por exemplo: "
                 "2500 ou 2.500,00."
             )
-            st.session_state.messages.append({"role": "assistant", "content": ask})
+            st.session_state.messages.append(
+                {"role": "assistant", "content": ask, "mode": "markdown"}
+            )
             with st.chat_message("assistant"):
                 st.markdown(ask)
             st.rerun()
             return
 
-        # 2) Despesas mensais
         if stage == "ask_despesas":
             despesas = parse_brl_amount(original_input)
             if despesas is None:
@@ -460,7 +160,7 @@ def main() -> None:
                     "Digite apenas o valor, por exemplo: 2500 ou 2.500,00."
                 )
                 st.session_state.messages.append(
-                    {"role": "assistant", "content": msg}
+                    {"role": "assistant", "content": msg, "mode": "markdown"}
                 )
                 with st.chat_message("assistant"):
                     st.markdown(msg)
@@ -474,13 +174,14 @@ def main() -> None:
                 "Certo! Qual é o seu tipo de emprego? "
                 "Responda com uma das opções: formal, autônomo ou desempregado."
             )
-            st.session_state.messages.append({"role": "assistant", "content": ask})
+            st.session_state.messages.append(
+                {"role": "assistant", "content": ask, "mode": "markdown"}
+            )
             with st.chat_message("assistant"):
                 st.markdown(ask)
             st.rerun()
             return
 
-        # 3) Tipo de emprego
         if stage == "ask_emprego":
             emprego = original_input.strip().lower()
             if emprego not in {"formal", "autônomo", "autonomo", "desempregado"}:
@@ -489,7 +190,7 @@ def main() -> None:
                     "Por favor, responda apenas: formal, autônomo ou desempregado."
                 )
                 st.session_state.messages.append(
-                    {"role": "assistant", "content": msg}
+                    {"role": "assistant", "content": msg, "mode": "markdown"}
                 )
                 with st.chat_message("assistant"):
                     st.markdown(msg)
@@ -500,13 +201,14 @@ def main() -> None:
             st.session_state.interview_stage = "ask_dependentes"
 
             ask = "Quantos dependentes você possui? (Se não tiver, responda 0)."
-            st.session_state.messages.append({"role": "assistant", "content": ask})
+            st.session_state.messages.append(
+                {"role": "assistant", "content": ask, "mode": "markdown"}
+            )
             with st.chat_message("assistant"):
                 st.markdown(ask)
             st.rerun()
             return
 
-        # 4) Número de dependentes
         if stage == "ask_dependentes":
             try:
                 dependentes = int(original_input.strip())
@@ -515,7 +217,7 @@ def main() -> None:
             except ValueError:
                 msg = "Por favor, informe apenas um número inteiro maior ou igual a 0."
                 st.session_state.messages.append(
-                    {"role": "assistant", "content": msg}
+                    {"role": "assistant", "content": msg, "mode": "markdown"}
                 )
                 with st.chat_message("assistant"):
                     st.markdown(msg)
@@ -529,13 +231,14 @@ def main() -> None:
                 "Você possui dívidas ativas (em outros bancos ou cartões)? "
                 "Responda apenas sim ou não."
             )
-            st.session_state.messages.append({"role": "assistant", "content": ask})
+            st.session_state.messages.append(
+                {"role": "assistant", "content": ask, "mode": "markdown"}
+            )
             with st.chat_message("assistant"):
                 st.markdown(ask)
             st.rerun()
             return
 
-        # 5) Dívidas ativas
         if stage == "ask_dividas":
             answer = original_input.strip().lower()
             if answer in {"sim", "s"}:
@@ -545,7 +248,7 @@ def main() -> None:
             else:
                 msg = "Por favor, responda apenas sim ou não."
                 st.session_state.messages.append(
-                    {"role": "assistant", "content": msg}
+                    {"role": "assistant", "content": msg, "mode": "markdown"}
                 )
                 with st.chat_message("assistant"):
                     st.markdown(msg)
@@ -560,7 +263,7 @@ def main() -> None:
                     "Por favor, finalize a conversa e inicie novamente."
                 )
                 st.session_state.messages.append(
-                    {"role": "assistant", "content": error_msg}
+                    {"role": "assistant", "content": error_msg, "mode": "markdown"}
                 )
                 with st.chat_message("assistant"):
                     st.markdown(error_msg)
@@ -569,7 +272,7 @@ def main() -> None:
                 st.rerun()
                 return
 
-            result = run_credit_interview_from_api(
+            result = run_credit_interview(
                 cpf=st.session_state.cpf,
                 renda_mensal=data["renda_mensal"],
                 despesas_mensais=data["despesas_mensais"],
@@ -580,16 +283,14 @@ def main() -> None:
             reply = sanitize_ai_reply(result["reply"])
             menu_text = build_menu_text()
 
-            # 1) resposta da IA - TEXTO PURO
             st.session_state.messages.append(
-                {"role": "assistant", "content": reply}
+                {"role": "assistant", "content": reply, "mode": "text"}
             )
             with st.chat_message("assistant"):
                 st.text(reply)
 
-            # 2) menu - MARKDOWN
             st.session_state.messages.append(
-                {"role": "assistant", "content": menu_text}
+                {"role": "assistant", "content": menu_text, "mode": "markdown"}
             )
             with st.chat_message("assistant"):
                 st.markdown(menu_text)
@@ -600,13 +301,13 @@ def main() -> None:
             st.rerun()
             return
 
-    # ---------------- FLUXO DE COTAÇÃO DE MOEDA ----------------
     if st.session_state.authenticated and st.session_state.awaiting_fx_params:
-        st.session_state.messages.append({"role": "user", "content": original_input})
+        st.session_state.messages.append(
+            {"role": "user", "content": original_input, "mode": "markdown"}
+        )
         with st.chat_message("user"):
             st.markdown(original_input)
 
-        # Espera algo como: "USD BRL 100" ou "eur brl 2500"
         parts = original_input.split()
         if len(parts) != 3:
             msg = (
@@ -614,7 +315,7 @@ def main() -> None:
                 "(moeda de origem, moeda de destino e valor)."
             )
             st.session_state.messages.append(
-                {"role": "assistant", "content": msg}
+                {"role": "assistant", "content": msg, "mode": "markdown"}
             )
             with st.chat_message("assistant"):
                 st.markdown(msg)
@@ -629,41 +330,45 @@ def main() -> None:
                 "Use algo como: USD BRL 100 ou USD BRL 1500,00."
             )
             st.session_state.messages.append(
-                {"role": "assistant", "content": msg}
+                {"role": "assistant", "content": msg, "mode": "markdown"}
             )
             with st.chat_message("assistant"):
                 st.markdown(msg)
             st.rerun()
             return
 
-        result = get_fx_quote_from_api(base, target, amount)
+        result = get_fx_quote(base, target, amount)
         reply = sanitize_ai_reply(result["reply"])
         menu_text = build_menu_text()
 
-        st.session_state.messages.append({"role": "assistant", "content": reply})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": reply, "mode": "text"}
+        )
         with st.chat_message("assistant"):
             st.text(reply)
 
-        st.session_state.messages.append({"role": "assistant", "content": menu_text})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": menu_text, "mode": "markdown"}
+        )
         with st.chat_message("assistant"):
             st.markdown(menu_text)
-
 
         st.session_state.awaiting_fx_params = False
         st.session_state.current_agent = "credit"
         st.rerun()
         return
 
-    # ---------------- OPCÕES NUMÉRICAS PÓS-AUTENTICAÇÃO ----------------
-
-    # 5 → encerra conversa e volta pro início
     if st.session_state.authenticated and original_input == "5":
-        st.session_state.messages.append({"role": "user", "content": original_input})
+        st.session_state.messages.append(
+            {"role": "user", "content": original_input, "mode": "markdown"}
+        )
         with st.chat_message("user"):
             st.markdown(original_input)
 
         goodbye = "Sessão encerrada. Vamos começar de novo? Informe seu CPF. 👋"
-        st.session_state.messages.append({"role": "assistant", "content": goodbye})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": goodbye, "mode": "markdown"}
+        )
         with st.chat_message("assistant"):
             st.markdown(goodbye)
 
@@ -672,9 +377,10 @@ def main() -> None:
         st.rerun()
         return
 
-    # 1 → consultar limite
     if st.session_state.authenticated and original_input == "1":
-        st.session_state.messages.append({"role": "user", "content": original_input})
+        st.session_state.messages.append(
+            {"role": "user", "content": original_input, "mode": "markdown"}
+        )
         with st.chat_message("user"):
             st.markdown(original_input)
 
@@ -684,25 +390,25 @@ def main() -> None:
                 "Por favor, finalize a conversa e inicie novamente."
             )
             st.session_state.messages.append(
-                {"role": "assistant", "content": error_msg}
+                {"role": "assistant", "content": error_msg, "mode": "markdown"}
             )
             with st.chat_message("assistant"):
                 st.markdown(error_msg)
             st.rerun()
             return
 
-        result = get_credit_limit_from_api(st.session_state.cpf)
+        result = get_credit_limit(st.session_state.cpf)
         credit_reply = sanitize_ai_reply(result["reply"])
         menu_text = build_menu_text()
 
         st.session_state.messages.append(
-            {"role": "assistant", "content": credit_reply}
+            {"role": "assistant", "content": credit_reply, "mode": "text"}
         )
         with st.chat_message("assistant"):
             st.text(credit_reply)
 
         st.session_state.messages.append(
-            {"role": "assistant", "content": menu_text}
+            {"role": "assistant", "content": menu_text, "mode": "markdown"}
         )
         with st.chat_message("assistant"):
             st.markdown(menu_text)
@@ -711,9 +417,10 @@ def main() -> None:
         st.rerun()
         return
 
-    # 2 → solicitar aumento de limite
     if st.session_state.authenticated and original_input == "2":
-        st.session_state.messages.append({"role": "user", "content": original_input})
+        st.session_state.messages.append(
+            {"role": "user", "content": original_input, "mode": "markdown"}
+        )
         with st.chat_message("user"):
             st.markdown(original_input)
 
@@ -722,7 +429,9 @@ def main() -> None:
             "Por favor, me informe o novo valor de limite que você deseja, "
             "por exemplo: 5000 ou 7.500,00."
         )
-        st.session_state.messages.append({"role": "assistant", "content": ask_value})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": ask_value, "mode": "markdown"}
+        )
         with st.chat_message("assistant"):
             st.markdown(ask_value)
 
@@ -731,9 +440,10 @@ def main() -> None:
         st.rerun()
         return
 
-    # 3 → entrevista de crédito
     if st.session_state.authenticated and original_input == "3":
-        st.session_state.messages.append({"role": "user", "content": original_input})
+        st.session_state.messages.append(
+            {"role": "user", "content": original_input, "mode": "markdown"}
+        )
         with st.chat_message("user"):
             st.markdown(original_input)
 
@@ -745,7 +455,9 @@ def main() -> None:
             "Para começar, me informe sua renda mensal aproximada, "
             "por exemplo: 5000 ou 5.000,00."
         )
-        st.session_state.messages.append({"role": "assistant", "content": msg})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": msg, "mode": "markdown"}
+        )
         with st.chat_message("assistant"):
             st.markdown(msg)
 
@@ -753,9 +465,10 @@ def main() -> None:
         st.rerun()
         return
 
-    # 4 → cotação de moeda
     if st.session_state.authenticated and original_input == "4":
-        st.session_state.messages.append({"role": "user", "content": original_input})
+        st.session_state.messages.append(
+            {"role": "user", "content": original_input, "mode": "markdown"}
+        )
         with st.chat_message("user"):
             st.markdown(original_input)
 
@@ -764,7 +477,9 @@ def main() -> None:
             "Informe a moeda de origem, a moeda de destino e o valor, "
             "no formato: USD BRL 100 ou EUR BRL 2500."
         )
-        st.session_state.messages.append({"role": "assistant", "content": msg})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": msg, "mode": "markdown"}
+        )
         with st.chat_message("assistant"):
             st.markdown(msg)
 
@@ -773,18 +488,19 @@ def main() -> None:
         st.rerun()
         return
 
-    # ---------------- FLUXO NORMAL (SCREENING) ----------------
-
-    st.session_state.messages.append({"role": "user", "content": user_input})
+    st.session_state.messages.append(
+        {"role": "user", "content": user_input, "mode": "markdown"}
+    )
     with st.chat_message("user"):
         st.markdown(user_input)
 
     result = send_message_to_screening(user_input)
     reply = sanitize_ai_reply(result["reply"])
 
-    # Se autenticou agora → responde com mensagem + menu junto
-    if not st.session_state.authenticated and detect_authenticated(
-        reply, result.get("authenticated", False)
+    if not st.session_state.authenticated and (
+        result.get("authenticated", False)
+        or "autenticação realizada com sucesso" in reply.lower()
+        or "você já está autenticado" in reply.lower()
     ):
         st.session_state.authenticated = True
         st.session_state.current_agent = "menu"
@@ -793,7 +509,7 @@ def main() -> None:
         full_message = f"{reply}\n\n{menu_text}"
 
         st.session_state.messages.append(
-            {"role": "assistant", "content": full_message}
+            {"role": "assistant", "content": full_message, "mode": "markdown"}
         )
         with st.chat_message("assistant"):
             st.markdown(full_message)
@@ -801,9 +517,11 @@ def main() -> None:
         st.rerun()
         return
 
-    st.session_state.messages.append({"role": "assistant", "content": reply})
+    st.session_state.messages.append(
+        {"role": "assistant", "content": reply, "mode": "text"}
+    )
     with st.chat_message("assistant"):
-        st.markdown(reply)
+        st.text(reply)
 
     st.rerun()
 
