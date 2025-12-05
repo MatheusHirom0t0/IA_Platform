@@ -112,10 +112,9 @@ class CreditService:
         """TODO"""
         current_limit = self.get_current_limit(cpf)
 
-        # pedido menor que o limite atual
         if requested_limit < current_limit:
             status = "requested_below_current"
-            max_allowed = current_limit  # só para ter um valor razoável no retorno
+            max_allowed = current_limit
 
             self.append_request(cpf, current_limit, requested_limit, status)
 
@@ -134,10 +133,8 @@ class CreditService:
         if requested_limit <= max_allowed:
             status = "approved"
 
-        # registra o pedido sempre
         self.append_request(cpf, current_limit, requested_limit, status)
 
-        # se aprovado, atualiza o limite no clientes.csv
         if status == "approved":
             self.update_client_limit(cpf, requested_limit)
 

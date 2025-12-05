@@ -19,26 +19,11 @@ def clean_cpf(cpf: str) -> str:
     return extract_digits(cpf)
 
 def extract_cpf_digits(raw_cpf: str) -> str:
-    """
-    Extrai apenas os dígitos de um CPF.
-    Exemplo: '123.456.789-00' -> '12345678900'
-    """
+    """TODO"""
     return "".join(ch for ch in raw_cpf if ch.isdigit())
 
 def normalize_birth_date(raw_birth_date: str) -> str:
-    """
-    Normaliza datas de nascimento para o formato 'YYYY-MM-DD'.
-
-    Aceita os seguintes formatos de entrada:
-    - DD/MM/YYYY   (ex: 30/11/2000)
-    - DD-MM-YYYY   (ex: 30-11-2000)
-    - YYYY/MM/DD   (ex: 2000/11/30)
-    - YYYY-MM-DD   (ex: 2000-11-30)
-    - YYYYMMDD     (ex: 20001130)
-    - DDMMYYYY     (ex: 30112000)
-
-    Lança TypeError se nenhum formato bater ou se a data for inválida.
-    """
+    """TODO"""
     raw = raw_birth_date.strip()
 
     formatos = [

@@ -29,7 +29,6 @@ class InterviewService:
             writer.writeheader()
             writer.writerows(rows)
 
-    # ----------------- CÁLCULO DO SCORE EM PYTHON -----------------
 
     def calculate_score(
         self,

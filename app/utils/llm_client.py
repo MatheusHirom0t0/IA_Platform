@@ -1,4 +1,4 @@
-"""LLM Client for Groq"""
+"""TODO"""
 import os
 from functools import lru_cache
 from groq import Groq, GroqError
@@ -6,7 +6,7 @@ from groq import Groq, GroqError
 
 @lru_cache(maxsize=1)
 def get_client() -> Groq:
-    """Returns a cached Groq client instance."""
+    """TODO"""
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError("GROQ_API_KEY is not set")
@@ -15,7 +15,7 @@ def get_client() -> Groq:
 
 
 def generate_text(system_message: str, user_message: str) -> str:
-    """Generate text using Groq LLM."""
+    """TODO"""
     client = get_client()
 
     model_name = os.getenv("GROQ_MODEL_NAME", "llama-3.1-8b-instant")
@@ -32,10 +32,8 @@ def generate_text(system_message: str, user_message: str) -> str:
             temperature=0.4,
         )
 
-        # Objeto ChatCompletionMessage
         chat_msg = response.choices[0].message
 
-        # Conteúdo REAL da resposta
         content = chat_msg.content or ""
 
         return content.strip()

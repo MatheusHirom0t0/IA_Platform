@@ -34,10 +34,16 @@ class InterviewController:
 
         try:
             updated = self.service.update_client_score(cpf, score)
-        except FileNotFoundError:
-            raise HTTPException(500, "Clients CSV not found")
-        except ValueError:
-            raise HTTPException(404, "Client not found")
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Clients CSV not found",
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Client not found",
+            ) from exc
 
         interview_result = {
             "cpf": updated["cpf"],
