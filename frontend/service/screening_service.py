@@ -1,11 +1,19 @@
-"""TODO"""
+"""Utility functions for communicating with the screening API endpoints."""
+import os
 from typing import Dict, Any
 import requests
 
-from frontend.config import API_BASE_URL
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_BASE_URL = os.getenv("API_BASE_URL")
+if not API_BASE_URL:
+    raise RuntimeError("API_BASE_URL is not set.")
+
 
 def send_message_to_screening(message: str) -> Dict[str, Any]:
-    """TODO"""
+    """Sends a message to the screening agent API and returns the reply and authentication state."""
     url = f"{API_BASE_URL}/screening/chat"
 
     try:
@@ -35,7 +43,7 @@ def send_message_to_screening(message: str) -> Dict[str, Any]:
 
 
 def reset_screening_backend() -> None:
-    """TODO"""
+    """Sends a reset request to the screening backend service."""
     try:
         requests.post(f"{API_BASE_URL}/screening/reset", timeout=5)
     except requests.RequestException:

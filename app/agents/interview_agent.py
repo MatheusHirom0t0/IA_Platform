@@ -1,10 +1,10 @@
-"""TODO"""
+"""LLM-based agent responsible for generating credit interview explanations."""
 from typing import Dict, Any
 from app.utils.llm_client import generate_text
 
 
 class CreditInterviewAgent:
-    """TODO"""
+    """Generates explanations for the credit interview based on the computed score."""
     def __init__(self) -> None:
         self.system_prompt = (
             "Você é o Agente de Entrevista de Crédito do Banco Ágil.\n"
@@ -29,7 +29,7 @@ class CreditInterviewAgent:
         )
 
     def build_reply(self, data: Dict[str, Any]) -> str:
-        """TODO"""
+        """Generates a natural-language explanation of the computed credit score."""
         user_message = (
             f"O score calculado foi {data['score']}. "
             "Explique esse resultado para o cliente com base nos dados fornecidos: "

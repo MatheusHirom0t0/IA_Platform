@@ -1,4 +1,4 @@
-"""TODO"""
+"""Controller responsible for handling credit interview logic and generating explanations via LLM."""
 import os
 from fastapi import HTTPException, status
 
@@ -7,7 +7,7 @@ from app.agents.interview_agent import CreditInterviewAgent
 
 
 class InterviewController:
-    """TODO"""
+    """Coordinates score calculation, client score updates, and generation of interview explanations."""
     def __init__(self) -> None:
         clients_csv = os.getenv("CLIENTS_CSV_PATH", "data/clientes.csv")
 
@@ -17,19 +17,19 @@ class InterviewController:
     def run_interview(
         self,
         cpf: str,
-        renda_mensal: float,
-        despesas_mensais: float,
-        tipo_emprego: str,
-        numero_dependentes: int,
-        tem_dividas: bool,
+        monthly_income: float,
+        monthly_expenses: float,
+        job_type: str,
+        dependents_count: int,
+        has_debt: bool,
     ):
-        """TODO"""
+        """Calculates the credit score, updates the client record, and generates an LLM explanation."""
         score = self.service.calculate_score(
-            renda_mensal,
-            despesas_mensais,
-            tipo_emprego,
-            numero_dependentes,
-            tem_dividas,
+            monthly_income,
+            monthly_expenses,
+            job_type,
+            dependents_count,
+            has_debt,
         )
 
         try:
@@ -49,11 +49,11 @@ class InterviewController:
             "cpf": updated["cpf"],
             "nome": updated["nome"],
             "score": updated["score"],
-            "renda_mensal": renda_mensal,
-            "despesas_mensais": despesas_mensais,
-            "tipo_emprego": tipo_emprego,
-            "numero_dependentes": numero_dependentes,
-            "tem_dividas": tem_dividas,
+            "renda_mensal": monthly_income,
+            "despesas_mensais": monthly_expenses,
+            "tipo_emprego": job_type,
+            "numero_dependentes": dependents_count,
+            "tem_dividas": has_debt,
         }
 
         reply_text = self.agent.build_reply(interview_result)

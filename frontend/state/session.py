@@ -1,10 +1,10 @@
-"""TODO"""
+"""Utility functions for initializing and managing Streamlit session state."""
 from typing import Optional
 import streamlit as st
 
 
 def init_session_state() -> None:
-    """TODO"""
+    """Initializes all required session state fields used throughout the application."""
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "started" not in st.session_state:
@@ -26,7 +26,7 @@ def init_session_state() -> None:
 
 
 def maybe_store_cpf_from_input(user_input: str) -> None:
-    """TODO"""
+    """Extracts digits from user input and stores a valid 11-digit CPF in session state."""
     digits = "".join(ch for ch in user_input if ch.isdigit())
     if len(digits) == 11:
         st.session_state.cpf = digits

@@ -1,4 +1,4 @@
-"""TODO"""
+"""Controller responsible for handling forex quotation requests."""
 from typing import Dict
 
 from fastapi import HTTPException, status
@@ -8,13 +8,13 @@ from app.agents.forex_agent import ForexAgent
 
 
 class ForexController:
-    """TODO"""
+    """Provides forex quotation operations, delegating calculations to the service and messaging to the agent."""
     def __init__(self) -> None:
         self.service = ForexService()
         self.agent = ForexAgent()
 
     def get_quote(self, base: str, target: str, amount: float) -> Dict[str, object]:
-        """TODO"""
+        """Retrieves a forex quote and generates an LLM explanation for the user."""
         try:
             data = self.service.get_quote(base=base, target=target, amount=amount)
         except RuntimeError as exc:
@@ -27,8 +27,8 @@ class ForexController:
         converted_amount = data["converted_amount"]
 
         reply = self.agent.build_quote_reply(
-            base=base,
-            target=target,
+            base_currency=base,
+            target_currency=target,
             amount=amount,
             rate=rate,
             converted_amount=converted_amount,

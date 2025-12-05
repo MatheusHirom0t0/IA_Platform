@@ -1,10 +1,10 @@
-"""TODO"""
+"""Utility functions for parsing currency values and sanitizing AI text responses."""
 from typing import Optional
 import re
 
 
 def parse_brl_amount(raw: str) -> Optional[float]:
-    """TODO"""
+    """Parses a BRL-formatted string into a numeric float value."""
     text = raw.strip().replace("R$", "").replace(" ", "")
     if "," in text and "." in text:
         text = text.replace(".", "").replace(",", ".")
@@ -21,7 +21,7 @@ def parse_brl_amount(raw: str) -> Optional[float]:
 
 
 def sanitize_ai_reply(text: str) -> str:
-    """TODO"""
+    """Removes formatting artifacts, Markdown, HTML tags, and list symbols from AI responses."""
     if not isinstance(text, str):
         text = str(text)
 

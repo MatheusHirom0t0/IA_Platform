@@ -1,4 +1,4 @@
-"""TODO"""
+"""Service layer for credit interview score calculation and client score updates."""
 import csv
 from pathlib import Path
 from typing import Dict, List
@@ -7,7 +7,7 @@ from app.utils.auth_utils import clean_cpf
 
 
 class InterviewService:
-    """TODO"""
+    """Handles credit score computation and persistence for interview-related operations."""
     def __init__(self, clients_csv_path: str) -> None:
         self._clients_csv_path = Path(clients_csv_path)
 
@@ -29,46 +29,43 @@ class InterviewService:
             writer.writeheader()
             writer.writerows(rows)
 
-
     def calculate_score(
         self,
-        renda_mensal: float,
-        despesas_mensais: float,
-        tipo_emprego: str,
-        numero_dependentes: int,
-        tem_dividas: bool,
+        monthly_income: float,
+        monthly_expenses: float,
+        job_type: str,
+        dependents_count: int,
+        has_debt: bool,
     ) -> float:
-        """TODO"""
+        """Calculates a credit score based on income, expenses, employment type, dependents, and debts."""
+        income_weight = 30
 
-        peso_renda = 30
-
-        peso_emprego = {
+        employment_weight = {
             "formal": 300,
             "autônomo": 200,
             "autonomo": 200,
             "desempregado": 0,
-        }.get(tipo_emprego.lower(), 0)
+        }.get(job_type.lower(), 0)
 
-        if numero_dependentes <= 0:
-            peso_dependentes = 100
-        elif numero_dependentes == 1:
-            peso_dependentes = 80
-        elif numero_dependentes == 2:
-            peso_dependentes = 60
+        if dependents_count <= 0:
+            dependents_weight = 100
+        elif dependents_count == 1:
+            dependents_weight = 80
+        elif dependents_count == 2:
+            dependents_weight = 60
         else:
-            peso_dependentes = 30
+            dependents_weight = 30
 
-        peso_dividas = -100 if tem_dividas else 100
+        debt_weight = -100 if has_debt else 100
 
-        base = (renda_mensal / (despesas_mensais + 1)) * peso_renda
+        base = (monthly_income / (monthly_expenses + 1)) * income_weight
 
-        score = base + peso_emprego + peso_dependentes + peso_dividas
+        score = base + employment_weight + dependents_weight + debt_weight
 
         return round(max(0, min(1000, score)), 2)
 
-
     def update_client_score(self, cpf: str, score: float) -> Dict[str, object]:
-        """TODO"""
+        """Updates the client's score in the CSV and returns a summary with CPF, name, and new score."""
         clients = self._load_clients()
         cpf_clean = clean_cpf(cpf)
 

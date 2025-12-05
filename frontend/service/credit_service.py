@@ -1,12 +1,19 @@
-"""TODO"""
+"""Utility functions for communicating with the credit API endpoints."""
+import os
 from typing import Dict, Any
 import requests
 
-from frontend.config import API_BASE_URL
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_BASE_URL = os.getenv("API_BASE_URL")
+if not API_BASE_URL:
+    raise RuntimeError("API_BASE_URL is not set.")
 
 
 def get_credit_limit(cpf: str) -> Dict[str, Any]:
-    """TODO"""
+    """Requests the user's current credit limit from the API."""
     url = f"{API_BASE_URL}/credit/limit/{cpf}"
 
     try:
@@ -39,7 +46,7 @@ def get_credit_limit(cpf: str) -> Dict[str, Any]:
 
 
 def request_credit_increase(cpf: str, requested_limit: float) -> Dict[str, Any]:
-    """TODO"""
+    """Sends a credit limit increase request to the API."""
     url = f"{API_BASE_URL}/credit/increase"
     payload = {"cpf": cpf, "requested_limit": requested_limit}
 

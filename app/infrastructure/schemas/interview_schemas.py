@@ -1,18 +1,18 @@
-"""TODO"""
+"""Pydantic schemas for credit interview requests and responses."""
 from pydantic import BaseModel
 
 
 class CreditInterviewRequest(BaseModel):
-    """TODO"""
+    """Request model containing all inputs used to compute the credit score."""
     cpf: str
-    renda_mensal: float
-    despesas_mensais: float
-    tipo_emprego: str
-    numero_dependentes: int
-    tem_dividas: bool
+    monthly_income: float
+    monthly_expenses: float
+    job_type: str
+    dependents_count: int
+    has_debt: bool
 
 
 class CreditInterviewResponse(BaseModel):
-    """TODO"""
+    """Response model containing the computed score and the LLM explanation."""
     score: float
     reply: str

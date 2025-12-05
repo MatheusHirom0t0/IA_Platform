@@ -1,4 +1,4 @@
-"""TODO"""
+"""Main Streamlit UI for the Banco Ágil virtual assistant."""
 import streamlit as st
 
 from frontend.service.screening_service import (
@@ -18,7 +18,7 @@ from frontend.ui.menu import build_menu_text
 
 
 def main() -> None:
-    """TODO"""
+    """Controls the Streamlit chat flow, handling user input, state, and backend calls."""
     st.set_page_config(page_title="Banco Ágil - Agente de Screening")
     st.title("Banco Ágil - Agente de Screening")
     st.caption("Simulador de atendimento bancário com IA.")
@@ -136,7 +136,7 @@ def main() -> None:
                 st.rerun()
                 return
 
-            data["renda_mensal"] = renda
+            data["monthly_income"] = renda
             st.session_state.interview_stage = "ask_despesas"
 
             ask = (
@@ -167,7 +167,7 @@ def main() -> None:
                 st.rerun()
                 return
 
-            data["despesas_mensais"] = despesas
+            data["monthly_expenses"] = despesas
             st.session_state.interview_stage = "ask_emprego"
 
             ask = (
@@ -197,7 +197,7 @@ def main() -> None:
                 st.rerun()
                 return
 
-            data["tipo_emprego"] = emprego
+            data["job_type"] = emprego
             st.session_state.interview_stage = "ask_dependentes"
 
             ask = "Quantos dependentes você possui? (Se não tiver, responda 0)."
@@ -224,7 +224,7 @@ def main() -> None:
                 st.rerun()
                 return
 
-            data["numero_dependentes"] = dependentes
+            data["dependents_count"] = dependentes
             st.session_state.interview_stage = "ask_dividas"
 
             ask = (
@@ -242,9 +242,9 @@ def main() -> None:
         if stage == "ask_dividas":
             answer = original_input.strip().lower()
             if answer in {"sim", "s"}:
-                tem_dividas = True
+                has_debt = True
             elif answer in {"não", "nao", "n"}:
-                tem_dividas = False
+                has_debt = False
             else:
                 msg = "Por favor, responda apenas sim ou não."
                 st.session_state.messages.append(
@@ -255,7 +255,7 @@ def main() -> None:
                 st.rerun()
                 return
 
-            data["tem_dividas"] = tem_dividas
+            data["has_debt"] = has_debt
 
             if not st.session_state.cpf:
                 error_msg = (
@@ -274,11 +274,11 @@ def main() -> None:
 
             result = run_credit_interview(
                 cpf=st.session_state.cpf,
-                renda_mensal=data["renda_mensal"],
-                despesas_mensais=data["despesas_mensais"],
-                tipo_emprego=data["tipo_emprego"],
-                numero_dependentes=data["numero_dependentes"],
-                tem_dividas=data["tem_dividas"],
+                monthly_income=data["monthly_income"],
+                monthly_expenses=data["monthly_expenses"],
+                job_type=data["job_type"],
+                dependents_count=data["dependents_count"],
+                has_debt=data["has_debt"],
             )
             reply = sanitize_ai_reply(result["reply"])
             menu_text = build_menu_text()
@@ -506,13 +506,18 @@ def main() -> None:
         st.session_state.current_agent = "menu"
 
         menu_text = build_menu_text()
-        full_message = f"{reply}\n\n{menu_text}"
 
         st.session_state.messages.append(
-            {"role": "assistant", "content": full_message, "mode": "markdown"}
+            {"role": "assistant", "content": reply, "mode": "text"}
         )
         with st.chat_message("assistant"):
-            st.markdown(full_message)
+            st.text(reply)
+
+        st.session_state.messages.append(
+            {"role": "assistant", "content": menu_text, "mode": "markdown"}
+        )
+        with st.chat_message("assistant"):
+            st.markdown(menu_text)
 
         st.rerun()
         return
