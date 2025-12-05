@@ -2,23 +2,56 @@
 
 ## Visão Geral do Projeto
 
-O Banco Ágil é uma aplicação composta por uma API em FastAPI e uma interface em Streamlit, criada para simular fluxos reais de atendimento bancário usando IA generativa.
-O sistema executa três operações principais:
-- **Triagem do cliente** (validação de CPF + data de nascimento)
-- **Consulta/Aumento de limite de crédito**
-- **Entrevista de crédito conduzida por um agente inteligente**
-A arquitetura foi pensada para ser modular, expansível e fácil de testar, permitindo que cada parte do fluxo evolua sem quebrar o restante da aplicação.
+O Banco Ágil é um projeto criado para simular como seria um atendimento bancário moderno, rápido e conduzido por agentes de IA.
+A ideia foi construir algo que parecesse uma conversa real com um atendente, mas com regras claras, estados conversacionais e decisões baseadas em dados.
+
+- Uma API em FastAPI (onde ficam os fluxos, regras e agentes)
+- Uma interface em Streamlit
+- Agentes de IA que controlam a triagem, consulta de limite e entrevista de crédito
+
+## Objetivo do projeto:
+1. Criação de agentes conversacionais
+2. Integração de IA em fluxos de manipulações de dados em CSV 
+3. Boas práticas de arquitetura de software
+4. Usar IA de forma controlada e segura, evitando que tenha contato direto com arquivos
+
+## Conceito de Agentes de IA no Projeto.
+Este projeto não usa IA apenas para “responder mensagens”.
+Os agentes têm estado, memória e lógica própria de decisão.
+
+**Agente de Triagem**
+*Fluxo*
+ask_cpf → ask_birthdate → authenticated
+
+**Agente de Entrevista de Crédito**
+Coleta renda, despesas, emprego, dependentes e dívidas.
+Calcula score via service e retorna resposta natural via IA.
+
+## Ideia do uso de IA
+Uma escolha intencional da arquitetura foi não permitir que a IA acesse dados sensíveis diretamente.
+Quem faz a leitura, escrita e decisões é o backend Python.
+A IA tem contato apenas com o contexto necessário para montar a resposta humanizada.
+
+**Por que isso é importante?**
+- A IA não entende muito privacidade e questões de LGPD.
+- Podem interferir incorretamente em dados.
+- Podem gerar dados imprecisos se caso receberem valores brutos.
+Esse é o mesmo padrão utilizado por plataformas grandes, como o Nubank e outros bancos digitais.
+
+**Isso garante:**
+*Segurança dos dados* 
+*Previsibilidade*
 
 ## Arquitetura do Sistema
+Optei por uma arquitetura simples, modular e fácil de testar, evitando overengineering sem perder boas práticas.
 
 ### Camadas principais
-
 O backend segue uma arquitetura em camadas:
-**Routers** → recebem a requisição HTTP e direcionam ao controller.
+**Routers** → recebem requisições, chamam os controllers
 **Controllers** → coordenam o fluxo, validam dados e chamam os services.
 **Services** → concentram regras de negócio (ex: cálculo de score).
 **Repositories** → leitura/escrita no CSV de clientes.
-**Agents (IA)** → processam linguagem natural, mantêm estados de conversa e controlam fluxos inteligentes.
+**Agents (IA)** → controlam conversa + IA.
 
 ### Fluxo de Triagem (Screening Agent)
 
@@ -40,53 +73,53 @@ Nenhum controller manipula arquivos diretamente.
 
 # Funcionalidades Implementadas
 - **Backend (FastAPI)**
-    - Autenticação via CPF + nascimento
-    - Fluxo de triagem inteligente
-    - Menu de ações (limite, aumento, entrevista, etc.)
-    - IA para respostas naturais (via agente)
-    - Cálculo de score de crédito
-    - Atualização de dados do cliente no CSV
+    - triagem (CPF + data de nascimento)
+    - agente de autenticação
+    - menu de ações inteligente
+    - entrevista de crédito
+    - cálculo de score de crédito
+    - atualização de dados do cliente no .csv
+    - logs em arquivo .csv
+    - retorno de valor cambial
+
 
 - **Frontend (Streamlit)**
-    - Conversa em tempo real com o agente
-    - Controle de sessão para manter o estado da conversa
-    - Redirecionamento automático para menu após autenticação
-    - Comandos para resetar fluxo quando necessário
+    - experiência conversacional
+    - controle de estado
+    - reset de fluxo
+    - formatação limpa das respostas
 
 # Problemas Encontrados e Como Foram Resolvidos
-1. **Manter o estado correto nos agentes de triagem e entrevista**
-**Problema:** A aba de ações (menu 1–5) estava sendo exibida antes da autenticação e reaparecendo após qualquer requisição, porque o Streamlit executa toda a aplicação a cada interação e o menu não estava condicionado ao estado correto. Isso causava duplicações e inconsistências no fluxo. Para resolver, o front foi reestruturado para exibir o menu somente quando authenticated == True, usando st.session_state para controlar o estado e evitar renderizações duplicadas ou fora de ordem. Com isso, a aba de ações agora aparece apenas no momento certo e de forma estável.
+1. **Estado no Streamlit**
+Resolvido reorganizando o fluxo e usando session_state.
 
-2. **Respostas da IA vinham com Markdown feio e não formatado**
-**Problema:** As respostas da IA apareciam com Markdown bruto (texto, # título, - lista), porque o front exibia o conteúdo diretamente sem realizar formatação, e em alguns momentos a API retornava atributos incorretos. O problema foi resolvido padronizando o acesso ao conteúdo da IA (response.choices[0].message.content) no backend e, no frontend, usando st.markdown(reply, unsafe_allow_html=True) para renderizar corretamente o texto. Assim, todas as respostas agora aparecem limpas, formatadas e com aparência profissional.
+2. **Markdown feio vindo da IA**
+Resolvido com st.markdown(..., unsafe_allow_html=True) e padronização no backend.
 
-3. **Configuração inadequada do front resultava em chamadas duplicadas e fluxo quebrado**
-**Problema:** O Streamlit estava executando blocos mais de uma vez, fazendo chamadas repetidas à API, reiniciando o fluxo sem querer e exibindo mensagens duplicadas, porque não havia controle de estado adequado. Para corrigir, o frontend foi reorganizado com uso consistente do st.session_state para armazenar estágios do agente, autenticação, histórico de mensagens e últimas ações. Além disso, o reset foi corrigido para realmente retornar à etapa inicial (digitar CPF), e as chamadas à API foram isoladas para evitar execuções automáticas indesejadas. Agora o fluxo funciona de forma previsível, sem duplicações e com controle total do estado.
+3. **Chamadas duplicadas**
+Resolvido isolando chamadas e controlando melhor o fluxo.
 
 # Escolhas Técnicas e Justificativas
 ## FastAPI
-- Escolhido pela capacidade de estruturar APIs de forma clara, tipada e modular.
-- Facilita a criação de camadas separadas (Routers, Controllers, Services, Agents).
-- A baixa latência do framework garante respostas rápidas mesmo ao integrar IA.
-- Ótimo suporte para validação com Pydantic, que ajuda a garantir que o fluxo conversacional receba dados limpos antes de chegar aos agentes de IA.
+- rápido, simples e fácil de testar
+- ótima separação de camadas
+- validações com Pydantic
+- ideal para fluxos conversacionais
 
 ## Groq
-- Utilizado como motor principal para executar inferências de IA devido à velocidade extremamente alta do GroqChip.
-- Respostas são muito mais rápidas que em modelos tradicionais, essencial para manter fluidez em conversas.
-- Permite usar modelos open-source (como Llama 3) com desempenho similar ou superior a soluções proprietárias.
-- Custo reduzido e throughput alto fazem dele uma ótima opção para aplicações de IA interativas.
+- latência extremamente baixa
+- suporte a modelos open-source
+- experiência conversacional fluida
 
 ## LangChain
-- Utilizado para organizar a comunicação com o LLM e estruturar prompts de forma mais limpa.
-- Facilita a criação de chains reutilizáveis, permitindo padronizar como o agente responde em diferentes etapas.
-- Abstrai a complexidade da integração com modelos, permitindo trocar o backend (Groq → OpenAI → Hugging Face) sem alterar a lógica da aplicação.
-- Ajuda a implementar controle conversacional, garantindo que o agente siga o fluxo definido (etapas de triagem, entrevista, coleta de dados, etc.).
+- organiza prompts
+- padroniza chamadas ao LLM
+- permite troca de modelos sem refatorar nada
 
 ## Client de IA Padronizado
-- Toda comunicação com o modelo passa por um client único (llm_client).
-- Torna fácil trocar o provedor de IA sem alterar controllers, services ou lógica de fluxo.
-- Resolve problemas de inconsistência no retorno dos modelos, convertendo tudo para texto limpo.
-- Implementa tratamento de erros e fallback de forma centralizada, garantindo resiliência.
+- ponto único de comunicação com o LLM
+- centraliza tratamento de erros
+- garante consistência e evita retornos imprevisíveis
 
 # Tutorial de Execução
 1. Clonar o repositório
