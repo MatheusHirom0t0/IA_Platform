@@ -1,11 +1,11 @@
-"""TODO"""
+"""LLM-based credit agent responsible for generating automated responses."""
 from typing import Dict
 
 from app.utils.llm_client import generate_text
 
 
 class CreditAgent:
-    """TODO"""
+    """Generates automated messages for credit consultation and limit increase requests."""
     def __init__(self) -> None:
         self.system_prompt = (
             "Você é o Agente de Crédito do Banco Ágil.\n"
@@ -22,7 +22,7 @@ class CreditAgent:
         )
 
     def build_limit_reply(self, cpf: str, limit_value: float) -> str:
-        """TODO"""
+        """Generates an LLM response explaining the user's current credit limit and next possible actions."""
         user_message = (
             "Situação: o cliente está consultando o limite de crédito atual.\n"
             f"Dados:\n- CPF: {cpf}\n- Limite atual (numérico): {limit_value}\n\n"
@@ -32,8 +32,8 @@ class CreditAgent:
 
         return generate_text(self.system_prompt, user_message)
     
-    def build_increase_reply(self,data: Dict[str, str]) -> str:
-        """TODO"""
+    def build_increase_reply(self, data: Dict[str, str]) -> str:
+        """Generates an LLM response explaining why the credit-limit increase request was approved or denied."""
         status = data["status"]
 
         base_instruction = (
@@ -54,7 +54,6 @@ class CreditAgent:
             instruction = (
                 "Explique que o pedido foi aprovado e forneça uma razão curta. "
                 "Nunca inclua números."
-
             )
 
         else:
@@ -62,6 +61,7 @@ class CreditAgent:
                 "Explique que o pedido foi recusado porque ultrapassa o limite permitido pelo score. "
                 "Sugira pedir um valor menor ou tentar entrevista de crédito."
             )
+
         user_message = base_instruction + "\n\n" + instruction
 
-        return generate_text(self.system_prompt,user_message)
+        return generate_text(self.system_prompt, user_message)

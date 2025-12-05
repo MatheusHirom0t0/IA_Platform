@@ -1,15 +1,15 @@
-"""TODO"""
+"""Service responsible for fetching forex rates from an external API."""
 from typing import Dict
 
 import requests
 
 
 class ForexService:
-    """TODO"""
+    """Provides forex quotation data using the Frankfurter API."""
     BASE_URL = "https://api.frankfurter.app/latest"
 
     def get_quote(self, base: str, target: str, amount: float) -> Dict[str, float]:
-        """TODO"""
+        """Fetches the exchange calculates the converted amount for the given currencies."""
         params = {"from": base.upper(), "to": target.upper()}
         try:
             resp = requests.get(self.BASE_URL, params=params, timeout=10)

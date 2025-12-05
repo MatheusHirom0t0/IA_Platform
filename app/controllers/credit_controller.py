@@ -1,4 +1,4 @@
-"""TODO"""
+"""Controller responsible for credit-related operations such as limit lookup and limit increase requests."""
 import os
 from typing import Dict
 
@@ -9,7 +9,7 @@ from app.agents.credit_agent import CreditAgent
 
 
 class CreditController:
-    """TODO"""
+    """Handles credit queries and limit increase requests, delegating logic to services and LLM agents."""
     def __init__(self) -> None:
         clients_csv = os.getenv("CLIENTS_CSV_PATH", "data/clientes.csv")
         score_limits_csv = os.getenv("SCORE_LIMITS_CSV_PATH", "data/score_limite.csv")
@@ -27,7 +27,7 @@ class CreditController:
         self.agent = CreditAgent()
 
     def get_limit(self, cpf: str) -> Dict[str, object]:
-        """TODO"""
+        """Fetches the user's current credit limit and generates an LLM explanation."""
         try:
             limit_value = self.service.get_current_limit(cpf)
         except ValueError as exc:
@@ -40,7 +40,7 @@ class CreditController:
         return {"limit": limit_value, "reply": reply}
 
     def request_increase(self, cpf: str, requested_limit: float) -> Dict[str, object]:
-        """TODO"""
+        """Processes a limit increase request and returns both system evaluation and an LLM response."""
         try:
             result = self.service.evaluate_increase_request(cpf, requested_limit)
         except ValueError as exc:

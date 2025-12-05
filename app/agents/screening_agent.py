@@ -1,4 +1,4 @@
-"""TODO"""
+"""LLM-based screening agent responsible for authentication flow and natural-language responses."""
 from typing import Optional, Dict, Any
 
 from app.controllers.auth_controller import AuthController
@@ -7,14 +7,14 @@ from app.utils.llm_client import generate_text
 
 
 class ScreeningAgent:
-    """TODO"""
+    """Handles the screening and authentication flow, generating LLM-based responses for each step."""
     def __init__(self, auth_controller: Optional[AuthController] = None) -> None:
         self.auth = auth_controller or AuthController()
         self.max_attempts: int = 3
         self.reset()
 
     def reset(self) -> None:
-        """TODO"""
+        """Resets all internal state for a new screening session."""
         self.cpf: Optional[str] = None
         self.birth_date: Optional[str] = None
         self.client: Optional[Dict[str, str]] = None
@@ -51,7 +51,7 @@ class ScreeningAgent:
         )
 
     def _build_llm_message(self, context: Dict[str, Any]) -> str:
-        """TODO"""
+        """Builds a structured LLM input describing the current authentication state and expected response style."""
         state = context["state"]
         user_input = context["user_input"]
         event = context["event"]
@@ -85,10 +85,12 @@ class ScreeningAgent:
         return description + "\n\n" + instructions
 
     def _reply_with_llm(self, context: Dict[str, Any]) -> str:
+        """Generates the final LLM response based on the screening context."""
         user_message = self._build_llm_message(context)
         return generate_text(self._system_prompt, user_message)
 
     def _increment_failed(self) -> bool:
+        """Increments failed attempts and returns whether the user is now blocked."""
         self.failed_attempts += 1
         if self.failed_attempts >= self.max_attempts:
             self.stage = "blocked"
@@ -96,7 +98,7 @@ class ScreeningAgent:
         return False
 
     def ask(self, user_input: str) -> str:
-        """TODO"""
+        """Processes the user's input according to the current authentication stage and generates an LLM reply."""
         raw_input = user_input.strip()
 
         if self.stage == "blocked":

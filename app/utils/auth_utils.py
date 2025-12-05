@@ -1,4 +1,4 @@
-"""TODO"""
+"""Utility functions for CPF cleaning, date normalization, and CSV reading."""
 import csv
 import os
 from pathlib import Path
@@ -10,20 +10,20 @@ load_dotenv()
 
 
 def extract_digits(text: str) -> str:
-    """TODO"""
+    """Returns only the numeric characters from the given text."""
     return "".join(ch for ch in text if ch.isdigit())
 
 
 def clean_cpf(cpf: str) -> str:
-    """TODO"""
+    """Cleans a CPF string by stripping all non-digit characters."""
     return extract_digits(cpf)
 
 def extract_cpf_digits(raw_cpf: str) -> str:
-    """TODO"""
+    """Extracts only digits from a raw CPF input."""
     return "".join(ch for ch in raw_cpf if ch.isdigit())
 
 def normalize_birth_date(raw_birth_date: str) -> str:
-    """TODO"""
+    """Normalizes a birth date from multiple formats into YYYY-MM-DD, raising on invalid input."""
     raw = raw_birth_date.strip()
 
     formatos = [
@@ -47,7 +47,7 @@ def normalize_birth_date(raw_birth_date: str) -> str:
 
 
 def read_csv(path: Optional[str] = None):
-    """TODO"""
+    """Reads a CSV file from the given path or CSV_PATH env var and returns its rows as dictionaries."""
     path = path or os.getenv("CSV_PATH")
     if not path:
         raise RuntimeError("CSV_PATH not set.")
@@ -61,7 +61,7 @@ def read_csv(path: Optional[str] = None):
 
 
 def validate_date(date_str: str) -> str:
-    """TODO"""
+    """Validates a YYYY-MM-DD date string, raising TypeError if any component is invalid."""
     parts = date_str.split("-")
     if len(parts) != 3:
         raise TypeError("Invalid date format. Expected YYYY-MM-DD.")
@@ -87,7 +87,7 @@ def validate_date(date_str: str) -> str:
     return date_str
 
 def normalize_date(raw_birth_date: str) -> str:
-    """TODO"""
+    """Normalizes a date from several common formats into YYYY-MM-DD, validating the final value."""
     raw = raw_birth_date.strip()
 
     if "-" in raw:

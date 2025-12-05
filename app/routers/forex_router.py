@@ -1,4 +1,4 @@
-"""TODO"""
+"""Routes for forex quotation operations."""
 from fastapi import APIRouter
 
 from app.controllers.forex_controller import ForexController
@@ -11,7 +11,7 @@ controller = ForexController()
 
 @router.post("/quote", response_model=FxQuoteResponse)
 def get_fx_quote(payload: FxQuoteRequest) -> FxQuoteResponse:
-    """TODO"""
+    """Returns the exchange rate, converted amount, and an LLM-generated explanation for the forex quote."""
     result = controller.get_quote(
         base=payload.base,
         target=payload.target,

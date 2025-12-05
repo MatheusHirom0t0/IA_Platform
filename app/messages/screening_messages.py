@@ -1,4 +1,4 @@
-"""TODO"""
+"""Constant messages used by the screening flow."""
 CPF_PROMPT = (
     "Para continuar, envie seu CPF com 11 dígitos (somente números)."
 )

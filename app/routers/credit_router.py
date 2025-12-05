@@ -1,4 +1,4 @@
-"""TODO"""
+"""Routes for credit limit lookup and limit increase requests."""
 from fastapi import APIRouter
 
 from app.controllers.credit_controller import CreditController
@@ -15,13 +15,13 @@ controller = CreditController()
 
 @router.get("/limit/{cpf}", response_model=CreditLimitResponse)
 def get_credit_limit(cpf: str) -> CreditLimitResponse:
-    """TODO"""
+    """Returns the user's current credit limit along with an LLM-generated explanation."""
     result = controller.get_limit(cpf)
     return CreditLimitResponse(**result)
 
 
 @router.post("/increase", response_model=CreditIncreaseResponse)
 def request_credit_increase(payload: CreditIncreaseRequest) -> CreditIncreaseResponse:
-    """TODO"""
+    """Evaluates a credit limit increase request and returns the decision with an LLM explanation."""
     result = controller.request_increase(payload.cpf, payload.requested_limit)
     return CreditIncreaseResponse(**result)
