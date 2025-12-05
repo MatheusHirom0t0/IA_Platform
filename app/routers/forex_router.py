@@ -1,4 +1,5 @@
 """Routes for forex quotation operations."""
+
 from fastapi import APIRouter
 
 from app.controllers.forex_controller import ForexController

@@ -1,4 +1,5 @@
 """Utility function for requesting forex quote data from the API."""
+
 import os
 from typing import Dict, Any
 import requests
@@ -19,31 +20,32 @@ def get_fx_quote(base: str, target: str, amount: float) -> Dict[str, Any]:
 
     try:
         response = requests.post(url, json=payload, timeout=30)
-    except requests.RequestException as exc:
+    except requests.RequestException:
         return {
-            "reply": f"❌ Erro ao conectar com a API de câmbio: {exc}",
+            "reply": "❌ Erro ao conectar com o serviço de câmbio.",
+            "rate": None,
+            "converted_amount": None,
+        }
+
+    try:
+        data = response.json()
+    except ValueError:
+        return {
+            "reply": "❌ Resposta inválida do serviço de câmbio.",
             "rate": None,
             "converted_amount": None,
         }
 
     if response.status_code != 200:
-        try:
-            data = response.json()
-            detail = data.get("detail") or data
-        except Exception:
-            detail = response.text
+        detail = data.get("detail") or "Erro desconhecido."
         return {
-            "reply": f"❌ Erro da API de câmbio ({response.status_code}): {detail}",
+            "reply": f"❌ {detail}",
             "rate": None,
             "converted_amount": None,
         }
 
-    data = response.json()
     return {
-        "reply": data.get(
-            "reply",
-            "❌ Resposta inesperada da API de câmbio.",
-        ),
+        "reply": data.get("reply"),
         "rate": data.get("rate"),
         "converted_amount": data.get("converted_amount"),
     }

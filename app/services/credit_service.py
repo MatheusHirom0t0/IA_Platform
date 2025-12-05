@@ -1,4 +1,5 @@
 """Service layer for credit operations such as limits, scores, and increase requests."""
+
 import csv
 import datetime
 from pathlib import Path
@@ -7,6 +8,7 @@ from typing import Dict, List
 
 class CreditService:
     """Provides credit-related business logic based on CSV-stored client, score, and request data."""
+
     def __init__(
         self,
         clients_csv_path: str,
@@ -108,7 +110,9 @@ class CreditService:
                 }
             )
 
-    def evaluate_increase_request(self, cpf: str, requested_limit: float) -> Dict[str, str]:
+    def evaluate_increase_request(
+        self, cpf: str, requested_limit: float
+    ) -> Dict[str, str]:
         """Evaluates a credit limit increase request and returns a summary including status and limits."""
         current_limit = self.get_current_limit(cpf)
 

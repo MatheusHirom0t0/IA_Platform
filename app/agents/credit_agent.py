@@ -1,4 +1,5 @@
 """LLM-based credit agent responsible for generating automated responses."""
+
 from typing import Dict
 
 from app.utils.llm_client import generate_text
@@ -6,6 +7,7 @@ from app.utils.llm_client import generate_text
 
 class CreditAgent:
     """Generates automated messages for credit consultation and limit increase requests."""
+
     def __init__(self) -> None:
         self.system_prompt = (
             "Você é o Agente de Crédito do Banco Ágil.\n"
@@ -31,7 +33,7 @@ class CreditAgent:
         )
 
         return generate_text(self.system_prompt, user_message)
-    
+
     def build_increase_reply(self, data: Dict[str, str]) -> str:
         """Generates an LLM response explaining why the credit-limit increase request was approved or denied."""
         status = data["status"]

@@ -1,4 +1,5 @@
 """Utility functions for CPF cleaning, date normalization, and CSV reading."""
+
 import csv
 import os
 from pathlib import Path
@@ -18,9 +19,11 @@ def clean_cpf(cpf: str) -> str:
     """Cleans a CPF string by stripping all non-digit characters."""
     return extract_digits(cpf)
 
+
 def extract_cpf_digits(raw_cpf: str) -> str:
     """Extracts only digits from a raw CPF input."""
     return "".join(ch for ch in raw_cpf if ch.isdigit())
+
 
 def normalize_birth_date(raw_birth_date: str) -> str:
     """Normalizes a birth date from multiple formats into YYYY-MM-DD, raising on invalid input."""
@@ -45,7 +48,6 @@ def normalize_birth_date(raw_birth_date: str) -> str:
     raise TypeError("Formato de data inválido.")
 
 
-
 def read_csv(path: Optional[str] = None):
     """Reads a CSV file from the given path or CSV_PATH env var and returns its rows as dictionaries."""
     path = path or os.getenv("CSV_PATH")
@@ -58,4 +60,3 @@ def read_csv(path: Optional[str] = None):
 
     with file.open("r", encoding="utf-8") as f:
         return list(csv.DictReader(f))
-
