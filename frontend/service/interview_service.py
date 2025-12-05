@@ -1,26 +1,34 @@
-"""TODO"""
+"""Utility function for sending credit interview data to the API."""
+import os
 from typing import Dict, Any
 import requests
 
-from frontend.config import API_BASE_URL
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_BASE_URL = os.getenv("API_BASE_URL")
+if not API_BASE_URL:
+    raise RuntimeError("API_BASE_URL is not set.")
+
 
 def run_credit_interview(
     cpf: str,
-    renda_mensal: float,
-    despesas_mensais: float,
-    tipo_emprego: str,
-    numero_dependentes: int,
-    tem_dividas: bool,
+    monthly_income: float,
+    monthly_expenses: float,
+    job_type: str,
+    dependents_count: int,
+    has_debt: bool,
 ) -> Dict[str, Any]:
-    """TODO"""
+    """Sends credit interview data to the API and returns the score and response message."""
     url = f"{API_BASE_URL}/interview"
     payload = {
         "cpf": cpf,
-        "renda_mensal": renda_mensal,
-        "despesas_mensais": despesas_mensais,
-        "tipo_emprego": tipo_emprego,
-        "numero_dependentes": numero_dependentes,
-        "tem_dividas": tem_dividas,
+        "monthly_income": monthly_income,
+        "monthly_expenses": monthly_expenses,
+        "job_type": job_type,
+        "dependents_count": dependents_count,
+        "has_debt": has_debt,
     }
 
     try:

@@ -1,4 +1,4 @@
-"""TODO"""
+"""Utility functions for building the user menu displayed in the application."""
 from typing import Dict, List
 
 ACTIONS: Dict[str, str] = {
@@ -11,8 +11,8 @@ ACTIONS: Dict[str, str] = {
 
 
 def build_menu_text() -> str:
-    """TODO"""
-    lines: List[str] = ["**Selecione uma das opções:**", ""]
+    """Builds and returns the markdown menu listing all available user actions."""
+    lines: List[str] = ["Selecione uma das opções:", ""]
     for num, label in ACTIONS.items():
-        lines.append(f"- **{num}** {label}")
+        lines.append(f"{num}. {label}")
     return "\n".join(lines)
