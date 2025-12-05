@@ -1,3 +1,4 @@
+"""TODO"""
 import csv
 import datetime
 from pathlib import Path
@@ -5,6 +6,7 @@ from typing import Dict, List
 
 
 class CreditService:
+    """TODO"""
     def __init__(
         self,
         clients_csv_path: str,
@@ -16,19 +18,23 @@ class CreditService:
         self.requests_csv_path = Path(requests_csv_path)
 
     def read_clients(self) -> List[Dict[str, str]]:
+        """TODO"""
         with self.clients_csv_path.open("r", encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f)
             return list(reader)
 
     def read_score_limits(self) -> List[Dict[str, str]]:
+        """TODO"""
         with self.score_limits_csv_path.open("r", encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f)
             return list(reader)
 
     def normalize_cpf(self, cpf: str) -> str:
+        """TODO"""
         return "".join(ch for ch in cpf if ch.isdigit())
 
     def get_client_by_cpf(self, cpf: str) -> Dict[str, str]:
+        """TODO"""
         target = self.normalize_cpf(cpf)
         clients = self.read_clients()
         for row in clients:
@@ -38,6 +44,7 @@ class CreditService:
         raise ValueError("Client not found")
 
     def get_current_limit(self, cpf: str) -> float:
+        """TODO"""
         client = self.get_client_by_cpf(cpf)
 
         if "limite_atual" not in client or client["limite_atual"] in (None, ""):
@@ -47,6 +54,7 @@ class CreditService:
         return float(raw)
 
     def get_current_score(self, cpf: str) -> float:
+        """TODO"""
         client = self.get_client_by_cpf(cpf)
 
         if "score" not in client or client["score"] in (None, ""):
@@ -56,6 +64,7 @@ class CreditService:
         return float(raw)
 
     def get_max_allowed_limit(self, score: float) -> float:
+        """TODO"""
         rows = self.read_score_limits()
 
         for row in rows:
@@ -75,6 +84,7 @@ class CreditService:
         requested_limit: float,
         status: str,
     ) -> None:
+        """TODO"""
         fieldnames = [
             "cpf_cliente",
             "data_hora_solicitacao",
@@ -99,6 +109,7 @@ class CreditService:
             )
 
     def evaluate_increase_request(self, cpf: str, requested_limit: float) -> Dict[str, str]:
+        """TODO"""
         current_limit = self.get_current_limit(cpf)
 
         # pedido menor que o limite atual
@@ -140,6 +151,7 @@ class CreditService:
 
 
     def update_client_limit(self, cpf: str, new_limit: float) -> None:
+        """TODO"""
         clients = self.read_clients()
         target = self.normalize_cpf(cpf)
 

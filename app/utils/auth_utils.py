@@ -41,7 +41,6 @@ def normalize_birth_date(raw_birth_date: str) -> str:
     """
     raw = raw_birth_date.strip()
 
-    # Tenta múltiplos formatos conhecidos
     formatos = [
         "%d/%m/%Y",
         "%d-%m-%Y",
@@ -54,12 +53,10 @@ def normalize_birth_date(raw_birth_date: str) -> str:
     for fmt in formatos:
         try:
             dt = datetime.strptime(raw, fmt)
-            # Se deu certo em algum formato, normaliza para YYYY-MM-DD
             return dt.strftime("%Y-%m-%d")
         except ValueError:
             continue
 
-    # Se nenhum formato bateu, considera inválido
     raise TypeError("Formato de data inválido.")
 
 

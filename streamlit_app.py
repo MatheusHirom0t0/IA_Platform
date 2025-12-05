@@ -1,6 +1,7 @@
 """Streamlit UI para o Banco Ágil - Agente de Screening."""
 from typing import Dict, List, Optional
 
+import re
 import requests
 import streamlit as st
 
@@ -117,6 +118,105 @@ def request_credit_increase_from_api(cpf: str, requested_limit: float) -> dict:
     }
 
 
+def run_credit_interview_from_api(
+    cpf: str,
+    renda_mensal: float,
+    despesas_mensais: float,
+    tipo_emprego: str,
+    numero_dependentes: int,
+    tem_dividas: bool,
+) -> dict:
+    """
+    POST /interview
+    body:
+    {
+        "cpf": "...",
+        "renda_mensal": ...,
+        "despesas_mensais": ...,
+        "tipo_emprego": "...",
+        "numero_dependentes": ...,
+        "tem_dividas": true/false
+    }
+    """
+    url = f"{API_BASE_URL}/interview"
+    payload = {
+        "cpf": cpf,
+        "renda_mensal": renda_mensal,
+        "despesas_mensais": despesas_mensais,
+        "tipo_emprego": tipo_emprego,
+        "numero_dependentes": numero_dependentes,
+        "tem_dividas": tem_dividas,
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+    except requests.RequestException as exc:
+        return {
+            "reply": f"❌ Erro ao conectar com a API de entrevista de crédito: {exc}",
+            "score": None,
+        }
+
+    if response.status_code != 200:
+        try:
+            data = response.json()
+            detail = data.get("detail") or data
+        except Exception:
+            detail = response.text
+        return {
+            "reply": f"❌ Erro da API de entrevista de crédito ({response.status_code}): {detail}",
+            "score": None,
+        }
+
+    data = response.json()
+    return {
+        "reply": data.get(
+            "reply",
+            "❌ Resposta inesperada da API de entrevista de crédito.",
+        ),
+        "score": data.get("score"),
+    }
+
+
+def get_fx_quote_from_api(base: str, target: str, amount: float) -> dict:
+    """
+    POST /forex/quote
+    body: { "base": "USD", "target": "BRL", "amount": 100.0 }
+    """
+    url = f"{API_BASE_URL}/forex/quote"
+    payload = {"base": base, "target": target, "amount": amount}
+
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+    except requests.RequestException as exc:
+        return {
+            "reply": f"❌ Erro ao conectar com a API de câmbio: {exc}",
+            "rate": None,
+            "converted_amount": None,
+        }
+
+    if response.status_code != 200:
+        try:
+            data = response.json()
+            detail = data.get("detail") or data
+        except Exception:
+            detail = response.text
+        return {
+            "reply": f"❌ Erro da API de câmbio ({response.status_code}): {detail}",
+            "rate": None,
+            "converted_amount": None,
+        }
+
+    data = response.json()
+    return {
+        "reply": data.get(
+            "reply",
+            "❌ Resposta inesperada da API de câmbio.",
+        ),
+        "rate": data.get("rate"),
+        "converted_amount": data.get("converted_amount"),
+    }
+
+
 def reset_screening_backend() -> None:
     try:
         requests.post(f"{API_BASE_URL}/screening/reset", timeout=5)
@@ -124,7 +224,7 @@ def reset_screening_backend() -> None:
         pass
 
 
-# -------------------- ESTADO E HELPERS --------------------
+# -------------------- ESTADO, HELPERS E SANITIZAÇÃO --------------------
 
 
 def init_session_state() -> None:
@@ -140,6 +240,12 @@ def init_session_state() -> None:
         st.session_state.cpf: Optional[str] = None
     if "awaiting_increase_value" not in st.session_state:
         st.session_state.awaiting_increase_value = False
+    if "interview_stage" not in st.session_state:
+        st.session_state.interview_stage: Optional[str] = None
+    if "interview_data" not in st.session_state:
+        st.session_state.interview_data = {}
+    if "awaiting_fx_params" not in st.session_state:
+        st.session_state.awaiting_fx_params = False
 
 
 def build_menu_text() -> str:
@@ -191,6 +297,34 @@ def parse_brl_amount(raw: str) -> Optional[float]:
         return None
 
 
+def sanitize_ai_reply(text: str) -> str:
+    """
+    Remove formatação Markdown básica da resposta da IA
+    para evitar texto destacado como código/negrito/etc.
+    """
+    if not isinstance(text, str):
+        return str(text)
+
+    # remove backticks
+    text = text.replace("`", "")
+
+    # remove **negrito** e *itálico*
+    text = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", text)
+    text = re.sub(r"_([^_]+)_", r"\1", text)
+
+    # remove bullets no começo da linha (- algo, * algo)
+    lines = []
+    for line in text.splitlines():
+        line = re.sub(r"^\s*[-*]\s+", "", line)
+        lines.append(line)
+    text = "\n".join(lines)
+
+    # espaços duplicados
+    text = re.sub(r"[ ]{2,}", " ", text)
+
+    return text.strip()
+
+
 # -------------------- MAIN APP --------------------
 
 
@@ -237,7 +371,7 @@ def main() -> None:
         if amount is None:
             error_msg = (
                 "Não consegui entender o valor informado. "
-                "Por favor, digite apenas o número, por exemplo: `5000` ou `5.000,50`."
+                "Por favor, digite apenas o número, por exemplo: 5000 ou 5.000,50."
             )
             st.session_state.messages.append(
                 {"role": "assistant", "content": error_msg}
@@ -262,17 +396,260 @@ def main() -> None:
             return
 
         result = request_credit_increase_from_api(st.session_state.cpf, amount)
-        reply = result["reply"]
-
-        # resposta do aumento + menu
+        reply = sanitize_ai_reply(result["reply"])
         menu_text = build_menu_text()
-        full_reply = f"{reply}\n\n{menu_text}"
 
-        st.session_state.messages.append({"role": "assistant", "content": full_reply})
+        st.session_state.messages.append({"role": "assistant", "content": reply})
         with st.chat_message("assistant"):
-            st.markdown(full_reply)
+            st.text(reply)
+
+        st.session_state.messages.append({"role": "assistant", "content": menu_text})
+        with st.chat_message("assistant"):
+            st.markdown(menu_text)
 
         st.session_state.awaiting_increase_value = False
+        st.session_state.current_agent = "credit"
+        st.rerun()
+        return
+
+    # ---------------- FLUXO DE ENTREVISTA DE CRÉDITO ----------------
+    if st.session_state.authenticated and st.session_state.interview_stage is not None:
+        st.session_state.messages.append({"role": "user", "content": original_input})
+        with st.chat_message("user"):
+            st.markdown(original_input)
+
+        stage = st.session_state.interview_stage
+        data = st.session_state.interview_data
+
+        # 1) Renda mensal
+        if stage == "ask_renda":
+            renda = parse_brl_amount(original_input)
+            if renda is None:
+                msg = (
+                    "Não consegui entender sua renda. "
+                    "Digite apenas o valor, por exemplo: 5000 ou 5.000,00."
+                )
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": msg}
+                )
+                with st.chat_message("assistant"):
+                    st.markdown(msg)
+                st.rerun()
+                return
+
+            data["renda_mensal"] = renda
+            st.session_state.interview_stage = "ask_despesas"
+
+            ask = (
+                "Obrigado! Agora me informe o total aproximado das suas despesas mensais "
+                "(contas fixas, aluguel, etc). Digite apenas o valor, por exemplo: "
+                "2500 ou 2.500,00."
+            )
+            st.session_state.messages.append({"role": "assistant", "content": ask})
+            with st.chat_message("assistant"):
+                st.markdown(ask)
+            st.rerun()
+            return
+
+        # 2) Despesas mensais
+        if stage == "ask_despesas":
+            despesas = parse_brl_amount(original_input)
+            if despesas is None:
+                msg = (
+                    "Não consegui entender suas despesas. "
+                    "Digite apenas o valor, por exemplo: 2500 ou 2.500,00."
+                )
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": msg}
+                )
+                with st.chat_message("assistant"):
+                    st.markdown(msg)
+                st.rerun()
+                return
+
+            data["despesas_mensais"] = despesas
+            st.session_state.interview_stage = "ask_emprego"
+
+            ask = (
+                "Certo! Qual é o seu tipo de emprego? "
+                "Responda com uma das opções: formal, autônomo ou desempregado."
+            )
+            st.session_state.messages.append({"role": "assistant", "content": ask})
+            with st.chat_message("assistant"):
+                st.markdown(ask)
+            st.rerun()
+            return
+
+        # 3) Tipo de emprego
+        if stage == "ask_emprego":
+            emprego = original_input.strip().lower()
+            if emprego not in {"formal", "autônomo", "autonomo", "desempregado"}:
+                msg = (
+                    "Não reconheci esse tipo de emprego. "
+                    "Por favor, responda apenas: formal, autônomo ou desempregado."
+                )
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": msg}
+                )
+                with st.chat_message("assistant"):
+                    st.markdown(msg)
+                st.rerun()
+                return
+
+            data["tipo_emprego"] = emprego
+            st.session_state.interview_stage = "ask_dependentes"
+
+            ask = "Quantos dependentes você possui? (Se não tiver, responda 0)."
+            st.session_state.messages.append({"role": "assistant", "content": ask})
+            with st.chat_message("assistant"):
+                st.markdown(ask)
+            st.rerun()
+            return
+
+        # 4) Número de dependentes
+        if stage == "ask_dependentes":
+            try:
+                dependentes = int(original_input.strip())
+                if dependentes < 0:
+                    raise ValueError
+            except ValueError:
+                msg = "Por favor, informe apenas um número inteiro maior ou igual a 0."
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": msg}
+                )
+                with st.chat_message("assistant"):
+                    st.markdown(msg)
+                st.rerun()
+                return
+
+            data["numero_dependentes"] = dependentes
+            st.session_state.interview_stage = "ask_dividas"
+
+            ask = (
+                "Você possui dívidas ativas (em outros bancos ou cartões)? "
+                "Responda apenas sim ou não."
+            )
+            st.session_state.messages.append({"role": "assistant", "content": ask})
+            with st.chat_message("assistant"):
+                st.markdown(ask)
+            st.rerun()
+            return
+
+        # 5) Dívidas ativas
+        if stage == "ask_dividas":
+            answer = original_input.strip().lower()
+            if answer in {"sim", "s"}:
+                tem_dividas = True
+            elif answer in {"não", "nao", "n"}:
+                tem_dividas = False
+            else:
+                msg = "Por favor, responda apenas sim ou não."
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": msg}
+                )
+                with st.chat_message("assistant"):
+                    st.markdown(msg)
+                st.rerun()
+                return
+
+            data["tem_dividas"] = tem_dividas
+
+            if not st.session_state.cpf:
+                error_msg = (
+                    "❌ Não consegui identificar seu CPF na sessão. "
+                    "Por favor, finalize a conversa e inicie novamente."
+                )
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": error_msg}
+                )
+                with st.chat_message("assistant"):
+                    st.markdown(error_msg)
+                st.session_state.interview_stage = None
+                st.session_state.interview_data = {}
+                st.rerun()
+                return
+
+            result = run_credit_interview_from_api(
+                cpf=st.session_state.cpf,
+                renda_mensal=data["renda_mensal"],
+                despesas_mensais=data["despesas_mensais"],
+                tipo_emprego=data["tipo_emprego"],
+                numero_dependentes=data["numero_dependentes"],
+                tem_dividas=data["tem_dividas"],
+            )
+            reply = sanitize_ai_reply(result["reply"])
+            menu_text = build_menu_text()
+
+            # 1) resposta da IA - TEXTO PURO
+            st.session_state.messages.append(
+                {"role": "assistant", "content": reply}
+            )
+            with st.chat_message("assistant"):
+                st.text(reply)
+
+            # 2) menu - MARKDOWN
+            st.session_state.messages.append(
+                {"role": "assistant", "content": menu_text}
+            )
+            with st.chat_message("assistant"):
+                st.markdown(menu_text)
+
+            st.session_state.interview_stage = None
+            st.session_state.interview_data = {}
+            st.session_state.current_agent = "credit"
+            st.rerun()
+            return
+
+    # ---------------- FLUXO DE COTAÇÃO DE MOEDA ----------------
+    if st.session_state.authenticated and st.session_state.awaiting_fx_params:
+        st.session_state.messages.append({"role": "user", "content": original_input})
+        with st.chat_message("user"):
+            st.markdown(original_input)
+
+        # Espera algo como: "USD BRL 100" ou "eur brl 2500"
+        parts = original_input.split()
+        if len(parts) != 3:
+            msg = (
+                "Não consegui entender. Informe no formato: USD BRL 100 "
+                "(moeda de origem, moeda de destino e valor)."
+            )
+            st.session_state.messages.append(
+                {"role": "assistant", "content": msg}
+            )
+            with st.chat_message("assistant"):
+                st.markdown(msg)
+            st.rerun()
+            return
+
+        base, target, amount_str = parts[0].upper(), parts[1].upper(), parts[2]
+        amount = parse_brl_amount(amount_str)
+        if amount is None:
+            msg = (
+                "Não consegui entender o valor. "
+                "Use algo como: USD BRL 100 ou USD BRL 1500,00."
+            )
+            st.session_state.messages.append(
+                {"role": "assistant", "content": msg}
+            )
+            with st.chat_message("assistant"):
+                st.markdown(msg)
+            st.rerun()
+            return
+
+        result = get_fx_quote_from_api(base, target, amount)
+        reply = sanitize_ai_reply(result["reply"])
+        menu_text = build_menu_text()
+
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+        with st.chat_message("assistant"):
+            st.text(reply)
+
+        st.session_state.messages.append({"role": "assistant", "content": menu_text})
+        with st.chat_message("assistant"):
+            st.markdown(menu_text)
+
+
+        st.session_state.awaiting_fx_params = False
         st.session_state.current_agent = "credit"
         st.rerun()
         return
@@ -315,17 +692,20 @@ def main() -> None:
             return
 
         result = get_credit_limit_from_api(st.session_state.cpf)
-        credit_reply = result["reply"]
-
-        # resposta do limite + menu
+        credit_reply = sanitize_ai_reply(result["reply"])
         menu_text = build_menu_text()
-        full_reply = f"{credit_reply}\n\n{menu_text}"
 
         st.session_state.messages.append(
-            {"role": "assistant", "content": full_reply}
+            {"role": "assistant", "content": credit_reply}
         )
         with st.chat_message("assistant"):
-            st.markdown(full_reply)
+            st.text(credit_reply)
+
+        st.session_state.messages.append(
+            {"role": "assistant", "content": menu_text}
+        )
+        with st.chat_message("assistant"):
+            st.markdown(menu_text)
 
         st.session_state.current_agent = "credit"
         st.rerun()
@@ -339,8 +719,8 @@ def main() -> None:
 
         ask_value = (
             "Claro! Vamos solicitar um aumento de limite. 💳\n\n"
-            "Por favor, me informe o **novo valor de limite** que você deseja, "
-            "por exemplo: `5000` ou `7.500,00`."
+            "Por favor, me informe o novo valor de limite que você deseja, "
+            "por exemplo: 5000 ou 7.500,00."
         )
         st.session_state.messages.append({"role": "assistant", "content": ask_value})
         with st.chat_message("assistant"):
@@ -351,20 +731,45 @@ def main() -> None:
         st.rerun()
         return
 
-    # 3, 4 ainda não implementados
-    if st.session_state.authenticated and original_input in {"3", "4"}:
+    # 3 → entrevista de crédito
+    if st.session_state.authenticated and original_input == "3":
         st.session_state.messages.append({"role": "user", "content": original_input})
         with st.chat_message("user"):
             st.markdown(original_input)
 
-        reply = (
-            "Essa opção ainda não foi implementada no front deste protótipo. 😉\n\n"
-            "No backend, teremos rotas específicas para entrevista de crédito e cotação de moeda."
-        )
-        st.session_state.messages.append({"role": "assistant", "content": reply})
-        with st.chat_message("assistant"):
-            st.markdown(reply)
+        st.session_state.interview_stage = "ask_renda"
+        st.session_state.interview_data = {}
 
+        msg = (
+            "Vamos iniciar sua entrevista de crédito. 📝\n\n"
+            "Para começar, me informe sua renda mensal aproximada, "
+            "por exemplo: 5000 ou 5.000,00."
+        )
+        st.session_state.messages.append({"role": "assistant", "content": msg})
+        with st.chat_message("assistant"):
+            st.markdown(msg)
+
+        st.session_state.current_agent = "credit"
+        st.rerun()
+        return
+
+    # 4 → cotação de moeda
+    if st.session_state.authenticated and original_input == "4":
+        st.session_state.messages.append({"role": "user", "content": original_input})
+        with st.chat_message("user"):
+            st.markdown(original_input)
+
+        msg = (
+            "Vamos consultar a cotação. 💱\n\n"
+            "Informe a moeda de origem, a moeda de destino e o valor, "
+            "no formato: USD BRL 100 ou EUR BRL 2500."
+        )
+        st.session_state.messages.append({"role": "assistant", "content": msg})
+        with st.chat_message("assistant"):
+            st.markdown(msg)
+
+        st.session_state.awaiting_fx_params = True
+        st.session_state.current_agent = "credit"
         st.rerun()
         return
 
@@ -375,7 +780,7 @@ def main() -> None:
         st.markdown(user_input)
 
     result = send_message_to_screening(user_input)
-    reply = result["reply"]
+    reply = sanitize_ai_reply(result["reply"])
 
     # Se autenticou agora → responde com mensagem + menu junto
     if not st.session_state.authenticated and detect_authenticated(
