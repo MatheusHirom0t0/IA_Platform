@@ -1,4 +1,5 @@
 """Controller responsible for handling forex quotation requests."""
+
 from typing import Dict
 
 from fastapi import HTTPException, status
@@ -8,19 +9,25 @@ from app.agents.forex_agent import ForexAgent
 
 
 class ForexController:
-    """Provides forex quotation operations, delegating calculations to the service and messaging to the agent."""
     def __init__(self) -> None:
         self.service = ForexService()
         self.agent = ForexAgent()
 
     def get_quote(self, base: str, target: str, amount: float) -> Dict[str, object]:
-        """Retrieves a forex quote and generates an LLM explanation for the user."""
         try:
             data = self.service.get_quote(base=base, target=target, amount=amount)
         except RuntimeError as exc:
+            msg = str(exc).lower()
+
+            if "404" in msg or "not found" in msg:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Par de moedas inválido ou não encontrado: {base.upper()}/{target.upper()}.",
+                ) from exc
+
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=str(exc),
+                detail="Não foi possível consultar a cotação no momento. Tente novamente mais tarde.",
             ) from exc
 
         rate = data["rate"]

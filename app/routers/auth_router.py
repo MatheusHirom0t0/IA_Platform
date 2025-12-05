@@ -1,4 +1,5 @@
 """Authentication router exposing login endpoint."""
+
 from fastapi import APIRouter
 from app.controllers.auth_controller import AuthController
 

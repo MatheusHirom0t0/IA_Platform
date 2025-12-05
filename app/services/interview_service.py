@@ -1,4 +1,5 @@
 """Service layer for credit interview score calculation and client score updates."""
+
 import csv
 from pathlib import Path
 from typing import Dict, List
@@ -8,6 +9,7 @@ from app.utils.auth_utils import clean_cpf
 
 class InterviewService:
     """Handles credit score computation and persistence for interview-related operations."""
+
     def __init__(self, clients_csv_path: str) -> None:
         self._clients_csv_path = Path(clients_csv_path)
 
@@ -65,7 +67,7 @@ class InterviewService:
         return round(max(0, min(1000, score)), 2)
 
     def update_client_score(self, cpf: str, score: float) -> Dict[str, object]:
-        """Updates the client's score in the CSV and returns a summary with CPF, name, and new score."""
+        """Updates the client's score and returns a summary with CPF, name, and new score."""
         clients = self._load_clients()
         cpf_clean = clean_cpf(cpf)
 

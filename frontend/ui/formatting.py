@@ -1,4 +1,5 @@
 """Utility functions for parsing currency values and sanitizing AI text responses."""
+
 from typing import Optional
 import re
 

@@ -1,8 +1,12 @@
 """Routes for handling screening chat interactions and agent state management."""
+
 from fastapi import APIRouter
 
 from app.agents.screening_agent import ScreeningAgent
-from app.infrastructure.schemas.screening_schemas import ScreeningRequest, ScreeningResponse
+from app.infrastructure.schemas.screening_schemas import (
+    ScreeningRequest,
+    ScreeningResponse,
+)
 
 router = APIRouter(prefix="/screening", tags=["screening"])
 

@@ -1,4 +1,5 @@
 """Utility function for sending credit interview data to the API."""
+
 import os
 from typing import Dict, Any
 import requests

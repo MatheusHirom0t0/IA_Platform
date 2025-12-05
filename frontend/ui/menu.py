@@ -1,4 +1,5 @@
 """Utility functions for building the user menu displayed in the application."""
+
 from typing import Dict, List
 
 ACTIONS: Dict[str, str] = {

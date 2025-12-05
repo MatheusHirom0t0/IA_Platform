@@ -1,4 +1,5 @@
 """LLM-based screening agent responsible for authentication flow and natural-language responses."""
+
 from typing import Optional, Dict, Any
 
 from app.controllers.auth_controller import AuthController
@@ -8,6 +9,7 @@ from app.utils.llm_client import generate_text
 
 class ScreeningAgent:
     """Handles the screening and authentication flow, generating LLM-based responses for each step."""
+
     def __init__(self, auth_controller: Optional[AuthController] = None) -> None:
         self.auth = auth_controller or AuthController()
         self.max_attempts: int = 3
@@ -22,7 +24,6 @@ class ScreeningAgent:
         self.failed_attempts: int = 0
         self.stage: str = "ask_cpf"
         self.authenticated: bool = False
-
 
     @property
     def _system_prompt(self) -> str:

@@ -1,4 +1,5 @@
 """Routes for running the credit interview and generating score explanations."""
+
 from fastapi import APIRouter
 
 from app.controllers.interview_controller import InterviewController

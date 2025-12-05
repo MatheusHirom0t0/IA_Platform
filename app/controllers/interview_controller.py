@@ -1,4 +1,5 @@
 """Controller responsible for handling credit interview logic and generating explanations via LLM."""
+
 import os
 from fastapi import HTTPException, status
 
@@ -8,6 +9,7 @@ from app.agents.interview_agent import CreditInterviewAgent
 
 class InterviewController:
     """Coordinates score calculation, client score updates, and generation of interview explanations."""
+
     def __init__(self) -> None:
         clients_csv = os.getenv("CLIENTS_CSV_PATH", "data/clientes.csv")
 

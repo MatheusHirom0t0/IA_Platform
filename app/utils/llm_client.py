@@ -1,4 +1,5 @@
 """Utility functions for initializing the Groq client and generating LLM text responses."""
+
 import os
 from functools import lru_cache
 from groq import Groq, GroqError
@@ -6,7 +7,7 @@ from groq import Groq, GroqError
 
 @lru_cache(maxsize=1)
 def get_client() -> Groq:
-    """Creates and returns a cached Groq client instance using the API key from environment variables."""
+    """Creates and returns a cached Groq client instance using the API key."""
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError("GROQ_API_KEY is not set")

@@ -1,4 +1,5 @@
 """Main Streamlit UI for the Banco Ágil virtual assistant."""
+
 import streamlit as st
 
 from frontend.service.screening_service import (

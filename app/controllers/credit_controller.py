@@ -1,4 +1,5 @@
 """Controller responsible for credit-related operations such as limit lookup and limit increase requests."""
+
 import os
 from typing import Dict
 
@@ -10,6 +11,7 @@ from app.agents.credit_agent import CreditAgent
 
 class CreditController:
     """Handles credit queries and limit increase requests, delegating logic to services and LLM agents."""
+
     def __init__(self) -> None:
         clients_csv = os.getenv("CLIENTS_CSV_PATH", "data/clientes.csv")
         score_limits_csv = os.getenv("SCORE_LIMITS_CSV_PATH", "data/score_limite.csv")

@@ -1,4 +1,5 @@
 """Utility functions for communicating with the credit API endpoints."""
+
 import os
 from typing import Dict, Any
 import requests

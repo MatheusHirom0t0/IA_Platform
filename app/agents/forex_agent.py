@@ -1,9 +1,11 @@
 """LLM-based agent responsible for generating forex quotation messages."""
+
 from app.utils.llm_client import generate_text
 
 
 class ForexAgent:
     """Generates automated responses for forex quotation requests."""
+
     def __init__(self) -> None:
         self.system_prompt = (
             "Você é o Agente de Câmbio do Banco Ágil.\n"
