@@ -111,38 +111,29 @@ uvicorn app.main:app --reload
 5. Executar o frontend (Streamlit)
 streamlit run streamlit_app.py
 
+```text
 # Estrutura do Código
-
 app/
-│
 ├── agents/
-│   ├── screening_agent.py      # fluxo de triagem
-│   ├── interview_agent.py      # entrevista de crédito via IA
-│
+│   ├── screening_agent.py         # fluxo de triagem
+│   └── interview_agent.py         # entrevista de crédito via IA
 ├── controllers/
 │   ├── auth_controller.py
-│   ├── interview_controller.py
-│
+│   └── interview_controller.py
 ├── services/
-│   ├── credit_service.py       # regras de negócio
-│
+│   └── credit_service.py          # regras de negócio
 ├── repositories/
-│   ├── client_repository.py    # leitura/escrita CSV
-│
+│   └── client_repository.py       # leitura/escrita CSV
 ├── routers/
 │   ├── screening_router.py
-│   ├── credit_router.py
-│
+│   └── credit_router.py
 ├── infrastructure/
-│   └── schemas/                # Pydantic models
-│
+│   └── schemas/                   # Pydantic models
 └── utils/
     ├── auth_utils.py
-    ├── llm_client.py           # integração com IA
+    └── llm_client.py              # integração com IA
+```
 
-
-
-### Observação: Trabalho com uma estrutura diferente da feita aqui mas, para evitar overengineering, optei por uma estrutura diferente. Conseguiria trabalhar com erros em camadas diferentes mas visando uma aplicação mais simplificada, optei por essa arquitetura.
 
 
 ### Ferramentas para qualidade de Código:
@@ -151,3 +142,5 @@ verificando desde formatação (como limite de caracteres por linha) até possí
 
 2. *Black Formatter* Aplicado para formatar automaticamente todo o código de maneira consistente. 
 O Black elimina debates sobre estilo, padroniza espaçamentos, quebras de linha e organização geral do código, tornando o repositório mais legível, uniforme e fácil de manter.
+
+### Observação: Trabalho com uma estrutura diferente da feita aqui mas, para evitar overengineering, optei por uma estrutura diferente. Conseguiria trabalhar com erros em camadas diferentes mas visando uma aplicação mais simplificada, optei por essa arquitetura.
