@@ -142,7 +142,7 @@ uvicorn app.main:app --reload
 **Backend roda em http://localhost:8000**
 
 5. Executar o frontend (Streamlit)
-streamlit run streamlit_app.py
+streamlit run ui.py
 
 ```text
 # Estrutura do Código
